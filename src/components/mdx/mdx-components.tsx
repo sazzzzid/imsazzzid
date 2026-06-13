@@ -110,9 +110,9 @@ export function getMDXComponents(): MDXComponents {
         return (
           <div
             data-code-block
-            className="relative group my-8 w-full max-w-full overflow-hidden rounded-xl border border-border/50"
+            className="relative group my-8 w-full max-w-full overflow-hidden rounded-xl border border-border/50 bg-[#ffffff] dark:bg-[#24292e]"
           >
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/30 bg-black/5 dark:bg-white/[0.02]">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/30 bg-black/[0.04] dark:bg-black/20">
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
@@ -124,7 +124,7 @@ export function getMDXComponents(): MDXComponents {
             </div>
             <div
               tabIndex={0}
-              className="p-5 overflow-x-auto overscroll-x-contain max-w-full text-sm leading-relaxed [-webkit-overflow-scrolling:touch] [&_pre]:!bg-transparent [&_code]:!bg-transparent"
+              className="p-5 overflow-x-auto overscroll-x-contain max-w-full text-sm leading-relaxed [-webkit-overflow-scrolling:touch]"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           </div>
@@ -136,7 +136,7 @@ export function getMDXComponents(): MDXComponents {
             data-code-block
             className="relative group my-8 w-full max-w-full overflow-hidden rounded-xl border border-border/50 bg-[#0a0a0a] dark:bg-[#0a0a0a]"
           >
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/30 bg-black/5 dark:bg-white/[0.02]">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/30 bg-black/[0.04] dark:bg-black/20">
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
