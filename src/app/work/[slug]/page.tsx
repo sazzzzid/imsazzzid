@@ -75,7 +75,7 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
       <header className="mb-16 md:mb-24">
         <ProjectDetailClient>
           <div className="space-y-6">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <span>{meta.category}</span>
               <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
               <span>{meta.year}</span>
@@ -91,7 +91,7 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
               {meta.description}
             </p>
 
-            <div className="flex items-center gap-6 pt-4">
+            <div className="flex flex-wrap items-center gap-4 pt-4">
               {meta.liveUrl && (
                 <a
                   href={meta.liveUrl}

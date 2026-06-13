@@ -80,7 +80,10 @@ export function ContactContent() {
               className="focus-ring rounded-full px-6 min-h-11"
             >
               <a href={`mailto:${siteConfig.links.email}`}>
-                Email {siteConfig.links.email}
+                <span className="sm:hidden">Email me</span>
+                <span className="hidden sm:inline">
+                  Email {siteConfig.links.email}
+                </span>
               </a>
             </Button>
           </Magnetic>

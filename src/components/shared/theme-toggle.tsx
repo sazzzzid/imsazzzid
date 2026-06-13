@@ -21,7 +21,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   const isDark = useSyncExternalStore(
     subscribeToTheme,
     getDarkModeSnapshot,
-    () => false,
+    () => true,
   );
 
   const toggle = useCallback(() => {
@@ -42,7 +42,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       }
       onClick={toggle}
       className={cn(
-        "focus-ring fixed top-5 right-5 z-50 p-2.5 min-h-11 min-w-11 rounded-full bg-background/60 backdrop-blur-xl border border-border shadow-lg shadow-black/5 hover:border-foreground/20 transition-all duration-300 group flex items-center justify-center",
+        "focus-ring fixed fixed-top-safe fixed-right-safe z-50 p-2.5 min-h-11 min-w-11 rounded-full bg-background/60 backdrop-blur-xl border border-border shadow-lg shadow-black/5 hover:border-foreground/20 transition-all duration-300 group flex items-center justify-center",
         className,
       )}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}

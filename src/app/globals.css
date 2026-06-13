@@ -474,6 +474,7 @@
 
   html {
     @apply font-sans;
+    overflow-x: clip;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -481,6 +482,7 @@
 
   body {
     @apply bg-background text-foreground;
+    overflow-x: clip;
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
@@ -607,7 +609,7 @@
   }
 
   .container-prose {
-    @apply mx-auto w-full px-5 sm:px-8 lg:px-12;
+    @apply mx-auto w-full min-w-0 px-5 sm:px-8 lg:px-12;
     max-width: var(--container-prose);
   }
 
@@ -773,6 +775,27 @@
   /* iOS safe area padding for fixed bottom bars */
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Fixed chrome — clear notch / home indicator on mobile web */
+  .fixed-top-safe {
+    top: max(1.25rem, env(safe-area-inset-top, 0px));
+  }
+
+  .fixed-left-safe {
+    left: max(1.25rem, env(safe-area-inset-left, 0px));
+  }
+
+  .fixed-right-safe {
+    right: max(1.25rem, env(safe-area-inset-right, 0px));
+  }
+
+  /* Shiki code blocks — scroll inside the card on narrow viewports */
+  [data-code-block] .shiki,
+  [data-code-block] pre {
+    margin: 0;
+    max-width: none;
+    overflow: visible;
   }
 
   /* Anchor targets clear fixed floating nav */

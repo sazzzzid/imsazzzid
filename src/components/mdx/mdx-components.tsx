@@ -108,7 +108,10 @@ export function getMDXComponents(): MDXComponents {
           lang,
         );
         return (
-          <div className="relative group my-8 rounded-xl overflow-hidden border border-border/50">
+          <div
+            data-code-block
+            className="relative group my-8 w-full max-w-full overflow-hidden rounded-xl border border-border/50"
+          >
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/30 bg-black/5 dark:bg-white/[0.02]">
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
@@ -121,7 +124,7 @@ export function getMDXComponents(): MDXComponents {
             </div>
             <div
               tabIndex={0}
-              className="p-5 overflow-x-auto text-sm leading-relaxed [&_pre]:!bg-transparent [&_code]:!bg-transparent"
+              className="p-5 overflow-x-auto overscroll-x-contain max-w-full text-sm leading-relaxed [-webkit-overflow-scrolling:touch] [&_pre]:!bg-transparent [&_code]:!bg-transparent"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           </div>
@@ -129,7 +132,10 @@ export function getMDXComponents(): MDXComponents {
       } catch {
         // Fallback if highlighting fails
         return (
-          <div className="relative group my-8 rounded-xl overflow-hidden border border-border/50 bg-[#0a0a0a] dark:bg-[#0a0a0a]">
+          <div
+            data-code-block
+            className="relative group my-8 w-full max-w-full overflow-hidden rounded-xl border border-border/50 bg-[#0a0a0a] dark:bg-[#0a0a0a]"
+          >
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/30 bg-black/5 dark:bg-white/[0.02]">
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
               <span className="w-2.5 h-2.5 rounded-full bg-foreground/10" />
@@ -137,7 +143,7 @@ export function getMDXComponents(): MDXComponents {
             </div>
             <pre
               tabIndex={0}
-              className="p-5 overflow-x-auto text-sm font-mono leading-relaxed text-[#e4e4e7]"
+              className="p-5 overflow-x-auto overscroll-x-contain max-w-full text-sm font-mono leading-relaxed text-[#e4e4e7] [-webkit-overflow-scrolling:touch]"
               {...props}
             >
               {children}

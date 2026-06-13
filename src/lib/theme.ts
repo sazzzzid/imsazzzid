@@ -10,14 +10,10 @@ export function getStoredTheme(): "dark" | "light" | null {
   return null;
 }
 
-export function prefersDarkColorScheme(): boolean {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
 export function resolveDarkMode(): boolean {
   const stored = getStoredTheme();
   if (stored) return stored === "dark";
-  return prefersDarkColorScheme();
+  return true;
 }
 
 export function applyDarkMode(dark: boolean): void {

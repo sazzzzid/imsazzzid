@@ -111,14 +111,14 @@ export function SiteNav({ hasBlogPosts }: { hasBlogPosts: boolean }) {
           reducedMotion ? undefined : { duration: 0.5, delay: 0.2, ease: editorialEase }
         }
         style={reducedMotion ? undefined : { boxShadow: navShadow }}
-        className="hidden lg:flex fixed top-5 left-5 z-50 items-center gap-1 px-2 py-2 rounded-full bg-background/60 backdrop-blur-xl border border-border shadow-lg shadow-black/5 transition-[background,backdrop-filter] duration-300"
+        className="hidden lg:flex fixed fixed-top-safe fixed-left-safe z-50 items-center gap-1 px-2 py-2 rounded-full bg-background/60 backdrop-blur-xl border border-border shadow-lg shadow-black/5 transition-[background,backdrop-filter] duration-300"
         aria-label="Main navigation"
       >
         {siteNav.map((item) => renderNavLink(item.title, item.href))}
       </motion.nav>
 
       <nav
-        className="lg:hidden fixed top-5 left-5 z-50 flex items-center gap-2"
+        className="lg:hidden fixed fixed-top-safe fixed-left-safe z-50 flex items-center gap-2"
         aria-label="Main navigation"
       >
         <Link
