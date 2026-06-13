@@ -38,7 +38,7 @@ export default function OpenGraphImage() {
               background: "#ff611a",
             }}
           />
-          Developer tools, video & streaming
+          <span style={{ fontSize: 24, color: "#ff611a" }}>{siteConfig.name}</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -50,11 +50,20 @@ export default function OpenGraphImage() {
               lineHeight: 0.95,
             }}
           >
-            {siteConfig.author.name}
+            {siteConfig.name}
           </div>
           <div
             style={{
-              fontSize: 32,
+              fontSize: 28,
+              color: "rgba(250,250,250,0.55)",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {`${siteConfig.author.role} · ${siteConfig.author.company}`}
+          </div>
+          <div
+            style={{
+              fontSize: 24,
               color: "rgba(250,250,250,0.72)",
               maxWidth: 760,
               lineHeight: 1.35,

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "lenis/dist/lenis.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -273,6 +274,14 @@
   --sidebar-accent-foreground: #0a0a0a;
   --sidebar-border: #e5e5e5;
   --sidebar-ring: #0a0a0a;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    /* Menu button + safe area — tighter anchor landing on mweb */
+    --site-nav-offset: 4.25rem;
+    --scroll-anchor-offset: calc(var(--site-nav-offset) + 0.875rem);
+  }
 }
 
 @media (min-width: 1024px) {

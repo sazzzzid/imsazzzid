@@ -214,6 +214,7 @@ export function WorkGrid({
           role="tablist"
           aria-label="Filter projects by category"
           className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none"
+          data-lenis-prevent-touch
         >
           {categories.map((cat) => (
             <button

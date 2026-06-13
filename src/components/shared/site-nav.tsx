@@ -59,6 +59,27 @@ export function SiteNav({ hasBlogPosts }: { hasBlogPosts: boolean }) {
   ) => {
     const isActive = isNavItemActive(href, pathname);
 
+    // On homepage, Contact scrolls to the in-page section (matches hero CTA).
+    if (pathname === "/" && href === "/contact") {
+      return (
+        <button
+          key={href}
+          type="button"
+          onClick={() => {
+            handleSectionNavigate("contact");
+            onNavigate?.();
+          }}
+          className={cn(
+            navLinkClass,
+            "w-full justify-start lg:w-auto",
+            "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+          )}
+        >
+          {title}
+        </button>
+      );
+    }
+
     if (isHashHref(href)) {
       const sectionId = getSectionIdFromHref(href);
       if (!sectionId) return null;
@@ -118,16 +139,9 @@ export function SiteNav({ hasBlogPosts }: { hasBlogPosts: boolean }) {
       </motion.nav>
 
       <nav
-        className="lg:hidden fixed fixed-top-safe fixed-left-safe z-50 flex items-center gap-2"
+        className="lg:hidden fixed fixed-top-safe fixed-left-safe z-50 flex items-center"
         aria-label="Main navigation"
       >
-        <Link
-          href="/"
-          className="focus-ring rounded-full px-3 py-2 min-h-11 inline-flex items-center text-sm font-semibold bg-background/60 backdrop-blur-xl border border-border shadow-lg shadow-black/5"
-        >
-          {siteConfig.name}
-        </Link>
-
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button

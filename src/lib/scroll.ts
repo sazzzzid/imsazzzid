@@ -1,3 +1,5 @@
+import { LENIS_SCROLL_TO_OPTIONS } from "@/lib/lenis-config";
+
 function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
@@ -14,8 +16,7 @@ export function scrollToElement(id: string, lenis?: LenisLike | null) {
   if (!el) return;
 
   if (lenis) {
-    // Lenis already subtracts scroll-margin-top on the target element.
-    lenis.scrollTo(el, { offset: 0, programmatic: true });
+    lenis.scrollTo(el, LENIS_SCROLL_TO_OPTIONS);
     return;
   }
 

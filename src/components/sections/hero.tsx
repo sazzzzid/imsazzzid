@@ -16,7 +16,7 @@ import type { Project } from "@/types";
 
 const ease = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
-const nameChars = siteConfig.author.name.split("");
+const nameChars = siteConfig.name.split("");
 
 const statementLines = [
   { before: "You bring a ", highlight: "problem.", after: "" },
@@ -228,7 +228,10 @@ export function HeroSection({ projects }: { projects: Project[] }) {
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">
                 Recent work
               </p>
-              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 scrollbar-none">
+              <div
+                className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 scrollbar-none"
+                data-lenis-prevent-touch
+              >
                 {projects.map((project, i) => (
                   <motion.div
                     key={project.slug}

@@ -1,8 +1,9 @@
 import type { AvailabilityStatus } from "./profile";
 
 export const siteConfig = {
-  name: "Sazzzid",
-  title: "Sazzzid · Software Engineer",
+  /** Brand handle — nav, footer, hero */
+  name: "imsazzzid",
+  title: "imsazzzid · Software Engineer",
   description:
     "Software Engineer II at Physics Wallah. I build video streaming platforms, DRM playback systems, and interactive learning tools, including VisualJS.",
   url: "https://imsazzid.world",
@@ -16,7 +17,8 @@ export const siteConfig = {
     website: "https://imsazzid.world",
   },
   author: {
-    name: "Sazzzid",
+    /** Legal / formal name — About, structured data */
+    name: "Sazid Khan",
     fullName: "Sazid Khan",
     role: "Software Engineer II",
     company: "Physics Wallah",
