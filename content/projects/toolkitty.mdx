@@ -1,0 +1,499 @@
+---
+title: "ToolKitty"
+description: "Privacy-first developer and AI tools that run entirely in the browser, plus a Chrome extension platform sharing logic with the web app."
+excerpt: "50+ client-side tools, JSON, PDF, images, regex, AI prompts. Zero uploads. A Manifest V3 extension evolving into a multi-surface platform with shared lib/ logic."
+category: "Developer Tools"
+tags: ["Next.js", "Privacy", "Browser APIs", "Chrome Extension"]
+coverImage: "/images/projects/toolkitty-light.png"
+coverImageDark: "/images/projects/toolkitty-dark.png"
+year: "2025"
+role: "Solo Builder"
+liveUrl: "https://toolkitty.in"
+featured: false
+publishedAt: "2025-05-01"
+problem: "Developers constantly switch between scattered online tools. Most require signups, uploading files to unknown servers, or showing intrusive ads. Privacy is an afterthought. The Chrome extension duplicates the tool catalog and cannot share pins, deep links, or inline workflows with the site."
+solution: "Built a unified toolkit of 50+ utilities running 100% client-side. Evolving the Chrome extension into a multi-surface MV3 platform: popup launcher, side panel, context menus, and omnibox, all sharing lib/ logic through a pnpm monorepo with a generated tools catalog."
+impact: "50+ tools live on toolkitty.in. Chrome Web Store extension shipped. Zero server-side processing. Target architecture shares one lib/ source of truth between web and extension with progressive permissions and lazy heavy deps."
+metrics:
+  - label: "Tools"
+    value: "50+"
+  - label: "Data uploaded"
+    value: "0"
+  - label: "Extension"
+    value: "Live"
+techStack: ["Next.js", "TypeScript", "Manifest V3", "Vite", "Web Workers", "PDF.js", "Canvas API"]
+---
+
+## Why I Built This
+
+Developers live in a patchwork of single-purpose websites. Format JSON here, decode a JWT there, merge a PDF somewhere else. Most of those sites want a signup, send your files to a server you do not control, or bury the tool under ads.
+
+ToolKitty is the opposite. [toolkitty.in](https://toolkitty.in) runs **50+ utilities entirely in the browser**. No uploads. No accounts. No telemetry on your input. The Chrome extension gives instant access from the toolbar. The target architecture goes further: one shared logic layer between the website and the extension, with multiple surfaces (popup, side panel, context menu, omnibox) and deep linking between them.
+
+## What Ships Today (v1)
+
+The current Manifest V3 launcher lives in `chrome-extension/` and is live on the Chrome Web Store.
+
+It is a search-and-filter popup that opens `toolkitty.in/tools/{slug}`. Zero permissions. Vanilla HTML, CSS, and JS. The tool list is a hardcoded `TOOLS` array that duplicates `constants/tools.ts` on the web app. Distribution runs through the Chrome Web Store plus an `/extension` landing page on the site.
+
+That works, but it leaves real pain on the table:
+
+- The tool catalog is duplicated (`popup.js` vs `constants/tools.ts`)
+- No deep linking (selection or clipboard cannot pre-fill a tool)
+- No context menus or in-page workflows
+- Pinned tools use `localStorage` on the site (`tk-pinned-tools`) but the extension cannot read it
+- Heavy tools always require opening a full site tab
+
+v2 and beyond fix duplication first, then add smart surfaces without breaking what Store users already have.
+
+## Design Principles
+
+The extension platform follows the same rules as the web app.
+
+**Privacy-first.** User data never leaves the device.
+
+**Local-first.** Process in the extension when feasible, not on a server.
+
+**Minimal permissions.** Request only what each feature needs, when it needs it.
+
+**Shared logic.** One `lib/` source of truth, imported by both web and extension.
+
+**Lazy heavy deps.** Monaco, PDF tooling, and diff libraries load on demand.
+
+**Graceful fallback.** Open the full site when the extension UI is not enough.
+
+## System Overview
+
+Five user surfaces connect to one extension core and one monorepo:
+
+```
+User surfaces                    Extension (MV3)              Monorepo
+─────────────                    ───────────────              ────────
+Popup (launcher + mini tools) ──► Service Worker ◄──► chrome.storage.local
+Side Panel (wider tool UI)    ──►       │
+Context Menu (selection)      ──►       │
+Omnibox (tk keyword)          ──►       │
+toolkitty.in (full experience)◄─────────┘
+
+Monorepo packages:
+  @toolkitty/tools-catalog  ← generated from constants/tools.ts
+  @toolkitty/core           ← lib/* shared business logic
+  @toolkitty/extension-ui   ← slim React primitives (optional v3)
+  Next.js app               ← full tool experience
+```
+
+The popup and side panel import from `@toolkitty/tools-catalog` and `@toolkitty/core`. The service worker orchestrates context menus, omnibox, deep links, and messaging. The Next.js app shares `@toolkitty/core` and the same catalog. Nothing copies formatter code into the extension.
+
+## Target Monorepo Layout
+
+The repo evolves into a pnpm workspace without breaking the existing Next.js app:
+
+```
+dev-kit/
+├── app/                          # Next.js routes (unchanged)
+├── components/                   # Web UI (unchanged)
+├── lib/                          # Shared business logic (source of truth)
+├── constants/
+│   └── tools.ts                  # Web tool catalog (Lucide icons)
+│
+├── packages/
+│   ├── tools-catalog/            # Extension-safe tool manifest
+│   │   ├── src/
+│   │   │   ├── tools.json        # Generated from constants/tools.ts
+│   │   │   ├── categories.ts
+│   │   │   └── index.ts
+│   │   └── package.json
+│   │
+│   ├── core/                     # Re-export / bundle lib/* for extension
+│   │   ├── src/
+│   │   │   ├── json/
+│   │   │   ├── jwt/
+│   │   │   ├── encoding/
+│   │   │   └── index.ts
+│   │   └── package.json
+│   │
+│   └── extension-ui/             # Shared React primitives (optional v3)
+│       ├── src/
+│       │   ├── ToolInput.tsx
+│       │   ├── ToolOutput.tsx
+│       │   └── CopyButton.tsx
+│       └── package.json
+│
+├── apps/
+│   └── chrome-extension/
+│       ├── manifest.json
+│       ├── src/
+│       │   ├── background/service-worker.ts
+│       │   ├── popup/            # PopupApp.tsx, main.tsx, popup.html
+│       │   ├── sidepanel/        # SidePanelApp.tsx, sidepanel.html
+│       │   ├── content/          # selection-bridge.ts (optional, minimal)
+│       │   ├── tools/            # Inline mini-tool UIs
+│       │   │   ├── json-formatter/
+│       │   │   ├── jwt-decoder/
+│       │   │   └── base64/
+│       │   ├── messaging/        # types.ts, handlers.ts
+│       │   └── storage/          # preferences.ts, recent-tools.ts
+│       ├── public/icons/
+│       ├── vite.config.ts
+│       └── package.json
+│
+├── scripts/
+│   ├── sync-tools-catalog.ts     # constants/tools.ts → tools.json
+│   └── build-extension.ts
+│
+├── pnpm-workspace.yaml
+└── package.json
+```
+
+**Key rule:** `lib/` stays the logic owner. The extension imports `@toolkitty/core`. It never copies formatter code.
+
+## Extension Surfaces (MV3)
+
+### Service worker
+
+`background/service-worker.ts` is the central orchestrator. It registers context menus on install and update, handles the `tk` omnibox keyword, builds deep link URLs with payload hashes, routes messages between popup, side panel, and content scripts, runs optional weekly catalog sync alarms, and sets defaults on first install.
+
+Permissions grow progressively:
+
+- **v1 (current):** none
+- **v2:** `contextMenus`, `storage`
+- **v2.1:** `sidePanel`
+- **v3 (optional):** `clipboardRead`, user gesture only
+
+Never request `<all_urls>` unless a content script is strictly required.
+
+### Popup (~380×520px)
+
+Fast launcher plus Tier-1 inline tools:
+
+```
+┌─────────────────────────────────┐
+│ 🔍 Search tools…                │
+│ [All][Format][Convert][AI]…     │
+├─────────────────────────────────┤
+│ ⭐ Pinned                       │
+│  JSON Prettier  JWT Decoder …   │
+├─────────────────────────────────┤
+│ ── or run inline ──             │
+│ [Format JSON] [Decode JWT]      │
+│ ┌ input ──────────────────────┐ │
+│ │ { "hello": "world" }        │ │
+│ └─────────────────────────────┘ │
+│ [Format] [Copy] [Open full ↗]  │
+└─────────────────────────────────┘
+```
+
+Click a tool name to open the site tab (v1 behavior, kept). Click an inline action to run a mini UI in the popup. "Open full" deep links with prefill.
+
+### Side panel
+
+Tier-2 tools that need more space: diff views, JSON trees, regex testers. Same React app as the popup, routed by `?tool=jwt-decoder`. Lazy-loads heavy chunks like diff2html. Registered in manifest with `"side_panel": { "default_path": "sidepanel.html" }` and the `sidePanel` permission.
+
+### Content scripts (minimal, optional)
+
+Only if in-page selection capture is needed without clipboard permission. `content/selection-bridge.ts` runs on user gesture via `chrome.scripting.executeScript`, reads `window.getSelection().toString()`, sends to background, opens the tool with payload. No persistent injection on all pages. Prefer on-demand `executeScript` over always-on content scripts.
+
+### Context menus
+
+Registered in the service worker on `chrome.runtime.onInstalled`:
+
+- **tk-format-json:** when selection looks like JSON, inline format or open site
+- **tk-decode-jwt:** when selection matches a JWT pattern, open JWT decoder
+- **tk-base64-decode:** when selection looks Base64-like, open Base64 tool
+- **tk-parse-url:** when selection is a URL, open URL parser
+- **tk-hash:** for any text, open hash generator
+
+Detection uses lightweight heuristics in `@toolkitty/core` with no network call:
+
+```typescript
+detectContentType(text): "json" | "jwt" | "base64" | "url" | "unknown"
+```
+
+### Omnibox
+
+Keyword `tk` in the address bar:
+
+```
+tk json          → open JSON formatter
+tk jwt eyJ...    → open JWT decoder with token
+tk base64        → open Base64 tool
+tk pdf           → open PDF merger on site
+```
+
+## Tool Capability Tiers
+
+Not every web tool belongs in the extension UI. Each tool gets a capability class in `tools.json`:
+
+```typescript
+type ExtensionCapability =
+  | "link-only"      // open site only (PDF, image, Monaco)
+  | "inline-mini"    // run in popup via shared lib
+  | "side-panel"     // needs side panel width
+  | "context-action" // available from right-click
+  | "offline-full";  // full UI in extension (future)
+
+type ExtensionToolMeta = {
+  slug: string;
+  name: string;
+  description: string;
+  category: ToolCategory;
+  emoji: string;           // extension UI (no Lucide in vanilla v2)
+  color: string;
+  popular?: boolean;
+  capability: ExtensionCapability;
+  libEntry?: string;        // "@toolkitty/core/json/formatJson"
+  maxInlineInputBytes?: number;
+};
+```
+
+**Inline mini (popup):** JSON format/validate/minify, JWT decode, Base64, URL parse, UUID, hash, cron parse.
+
+**Side panel:** Regex tester, JSON diff, env parser, token counter.
+
+**Link only:** PDF tools, image tools, Monaco JS editor, embedding inspector. These stay on the site unless you accept 2MB+ lazy chunks in the extension.
+
+**Context action:** JSON, JWT, Base64, URL, hash from the right-click menu.
+
+## Shared Code Strategy
+
+### What shares from `lib/`
+
+Pure TypeScript modules are extension-safe: `lib/json/*`, `lib/jwt/*` (via jwt-decode), `lib/encoding/base64.ts`, `lib/url/parse-url.ts`, `lib/generators/*`, `lib/regex/*`, `lib/sql/format-sql.ts`, and `lib/prompt/*` for local string transforms.
+
+`lib/diff/line-diff.ts` works in the side panel with lazy loading. `lib/pdf/*` and `lib/image/*` are heavy; link-only initially, side panel later if bundle budget allows.
+
+### What stays web-only
+
+`components/tools/*` is React + Tailwind + Lucide; rebuild a slim UI in the extension. Lucide icons from `constants/tools.ts` do not bundle well in a tiny popup, so the extension catalog uses emoji and color instead. `lib/ads/*` and Next.js metadata/SEO never enter the extension.
+
+### Catalog sync pipeline
+
+```
+constants/tools.ts
+    → scripts/sync-tools-catalog.ts
+    → packages/tools-catalog/tools.json
+         (validates slug uniqueness, href consistency)
+```
+
+CI on every PR that touches `constants/tools.ts`:
+
+```bash
+pnpm sync:catalog && git diff --exit-code packages/tools-catalog/tools.json
+```
+
+This eliminates the duplicated `TOOLS` array in `popup.js`.
+
+## Deep Linking (Extension ↔ Website)
+
+Standardized handoff when the extension opens the full site with pre-filled input.
+
+**URL format:**
+
+```
+https://toolkitty.in/tools/{slug}?ext=1#payload={base64url(json)}
+```
+
+**Payload schema:**
+
+```typescript
+type ToolKittyDeepLinkPayload = {
+  v: 1;
+  input?: string;
+  mode?: string;        // e.g. "decode" | "encode"
+  source: "extension" | "context-menu" | "omnibox";
+  ts: number;           // optional expiry (5 min)
+};
+```
+
+**Web app hook:**
+
+```typescript
+// lib/deep-link/use-extension-payload.ts
+function useExtensionPayload(): string | null
+```
+
+On mount, if `#payload=` exists: decode base64url, validate with Zod, prefill input, then `history.replaceState` to strip the hash for privacy.
+
+Size limit: 8KB in the hash (Chrome URL limits). Larger payloads use `chrome.storage.session` with `?handoff={id}` and a postMessage bridge on that tab only.
+
+## Messaging Architecture
+
+```typescript
+// apps/chrome-extension/src/messaging/types.ts
+type MessageMap = {
+  GET_SELECTION: { tabId: number };
+  GET_SELECTION_RESULT: { text: string };
+  RUN_TOOL: { slug: string; input: string; options?: Record<string, unknown> };
+  RUN_TOOL_RESULT: { success: boolean; output?: string; error?: string };
+  OPEN_TOOL: { slug: string; payload?: ToolKittyDeepLinkPayload };
+  OPEN_SIDE_PANEL: { slug: string; payload?: ToolKittyDeepLinkPayload };
+  GET_PREFERENCES: void;
+  PREFERENCES: ExtensionPreferences;
+};
+```
+
+Typical flow: user pastes JSON in the popup and clicks Format. Popup sends `RUN_TOOL` to the service worker. Worker calls `formatJson(input)` from `@toolkitty/core`. Result returns to popup for display and copy. "Open full tool" sends `OPEN_TOOL` with slug and payload; worker calls `tabs.create` with the deep link URL. The website reads the hash and prefills.
+
+## State and Storage
+
+**Extension preferences** in `chrome.storage.local`:
+
+```typescript
+type ExtensionPreferences = {
+  theme: "light" | "dark" | "system";
+  pinnedSlugs: string[];
+  recentSlugs: string[];       // max 10
+  defaultSurface: "popup" | "sidepanel" | "tab";
+  inlineToolsEnabled: boolean;
+};
+```
+
+Pin sync between extension and site is optional v3. Recommended approach: extension owns `pinnedSlugs` in `chrome.storage.local`, website keeps `localStorage`. An optional "Sync pins" button on `/extension` can use `externally_connectable` later.
+
+**Session handoff** for large payloads uses `chrome.storage.session` (cleared on browser close):
+
+```typescript
+type SessionHandoff = {
+  id: string;
+  slug: string;
+  input: string;
+  createdAt: number;
+};
+```
+
+URL: `https://toolkitty.in/tools/json-formatter?handoff={id}`. Site reads via postMessage from extension content script on that tab only.
+
+## Build Pipeline
+
+**Tooling:** Vite bundles popup, side panel, and service worker. `@crxjs/vite-plugin` or `vite-plugin-web-extension` handles MV3 packaging. TypeScript strict with shared tsconfig base. Tailwind v4 for extension UI (subset of design tokens). React 19 in popup/sidepanel to match the web stack.
+
+**Vite highlights:**
+
+```typescript
+// Multiple entry points
+input: {
+  popup: "src/popup/main.tsx",
+  sidepanel: "src/sidepanel/main.tsx",
+  "service-worker": "src/background/service-worker.ts",
+}
+
+// Code splitting for heavy tools
+manualChunks: {
+  "tool-diff": ["@toolkitty/core/diff"],
+  "tool-regex": ["@toolkitty/core/regex"],
+}
+
+// Resolve workspace packages
+alias: { "@toolkitty/core": "../../packages/core/src" }
+```
+
+**Root scripts:**
+
+```json
+{
+  "sync:catalog": "tsx scripts/sync-tools-catalog.ts",
+  "ext:dev": "pnpm --filter @toolkitty/chrome-extension dev",
+  "ext:build": "pnpm sync:catalog && pnpm --filter @toolkitty/chrome-extension build",
+  "ext:zip": "pnpm ext:build && cd apps/chrome-extension/dist && zip -r ../../../toolkitty-extension.zip ."
+}
+```
+
+**CI checks:** catalog sync with no drift, extension build, manifest schema validation, bundle size budget (popup under 150KB gzipped, total under 2MB).
+
+## Security and Privacy
+
+**XSS in popup:** no `innerHTML` with user data; React text nodes only.
+
+**Data exfiltration:** no `fetch()` of user content; no analytics on tool input.
+
+**Over-broad permissions:** progressive permission model, phase by phase.
+
+**Malicious deep links:** Zod validate payload; strip hash after read.
+
+**CSP:** strict content security policy in manifest for extension pages.
+
+**JWT/secrets in URLs:** prefer hash fragment (not sent to server logs on navigation).
+
+**Permissions by phase:**
+
+- Phase 1 (current): `permissions: []`
+- Phase 2: `storage`, `contextMenus`
+- Phase 2.1: add `sidePanel`
+- Phase 3 (optional): `clipboardRead` if paste button needs it; `host_permissions: ["https://toolkitty.in/*"]` for handoff only
+
+## Extension UI Architecture
+
+Mirror web design tokens without importing the full Next.js tree:
+
+```
+apps/chrome-extension/src/styles/
+  ├── tokens.css        # subset: background, foreground, primary, border, muted
+  ├── popup.css
+  └── sidepanel.css
+```
+
+**Component layers:**
+
+`extension-ui` shared package: `SearchInput`, `FilterChips`, `ToolListItem`, `ToolRunnerShell` (input + output + copy + open-full), `ThemeToggle`.
+
+Per-tool wrappers in `tools/{slug}/` like `MiniJsonFormatter.tsx` call `@toolkitty/core` directly. Keep each mini-tool component under 150 lines.
+
+## Version Roadmap
+
+**Phase 1: Launcher (shipped).** Popup search and filter. Zero permissions. Opens toolkitty.in.
+
+**Phase 2: Smart launcher (4–6 weeks).** pnpm workspace plus catalog sync script. TypeScript and Vite build. Context menus for JSON, JWT, Base64, URL. Deep link protocol on the website. `chrome.storage` for pins and recents. Replace duplicated `popup.js` TOOLS array.
+
+**Phase 3: Inline tools (6–10 weeks).** Popup mini-runners for Tier-1 tools. Side panel for Tier-2 tools. Omnibox `tk` keyword. Lazy-loaded chunks with size budgets.
+
+**Phase 4: Platform (optional).** Firefox MV3 port. Pin sync between extension and site. New tab override with tool grid. Offline mode for Tier-1 tools via service worker cache.
+
+## Migration from Current Extension
+
+1. Move `chrome-extension/` to `apps/chrome-extension/`
+2. Add `pnpm-workspace.yaml`
+3. Add `scripts/sync-tools-catalog.ts` to eliminate `popup.js` duplication
+4. Introduce Vite alongside existing vanilla files (parallel build)
+5. Swap dist output once Vite build matches v1 UX
+6. Add background service worker and context menus
+7. Add deep link support on website tool pages
+
+No breaking change for existing Store users. v2 manifest adds permissions incrementally with in-update consent messaging.
+
+## Decision Log
+
+**Monorepo vs separate repo:** monorepo, to share `lib/` and keep one catalog source.
+
+**Framework in extension:** React + Vite, matches web stack and enables component reuse.
+
+**PDF/image in extension:** link-only in v2, bundle size and Chrome review complexity.
+
+**Content scripts:** on-demand injection only, minimal permission footprint.
+
+**Tool catalog icons:** emoji in extension, Lucide too heavy for popup bundle.
+
+**Data transfer to site:** URL hash plus session handoff, privacy-friendly, no server required.
+
+## The Web App Today
+
+While the extension evolves, [toolkitty.in](https://toolkitty.in) already ships 50+ tools across data/code, documents, images, and AI/productivity categories. Every tool follows **Input → Process → Output** with download and copy actions.
+
+CPU-intensive work (PDF processing, image manipulation) runs in Web Workers to keep the UI responsive:
+
+```typescript
+const worker = new Worker('/workers/pdf.js');
+worker.postMessage({ action: 'merge', files: arrayBuffers });
+worker.onmessage = (e) => setResult(e.data.output);
+```
+
+Image transforms use the Canvas API. The site deploys as static pages on Vercel with no backend. Service Worker caching makes tools work offline after first load.
+
+## Where It Stands
+
+- **50+ tools** live on toolkitty.in, zero data uploaded to any server
+- **Chrome Web Store** extension published (v1 launcher)
+- **Target architecture** defined for multi-surface MV3 platform with shared `lib/`
+- **Catalog sync** planned to end duplication between popup and web
+- **Deep linking** protocol designed for extension-to-site handoff
+- **Progressive permissions:** none today, context menus and storage in v2
+- **Bundle budgets:** popup under 150KB gzipped, total extension under 2MB

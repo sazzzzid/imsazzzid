@@ -1,0 +1,580 @@
+---
+title: "VisualJS"
+description: "Interactive JavaScript learning platform with a custom execution engine that visualizes memory, call stack, control flow, and async behavior step-by-step, entirely in the browser."
+excerpt: "85 chapters across 12 modules, live code visualizer, and project tutorials. Learn JavaScript by watching code execute visually. Zero backend, free forever."
+category: "EdTech / Learning Platform"
+tags: ["Next.js", "TypeScript", "AST", "Babel", "React Flow", "Web Workers", "Zustand"]
+coverImage: "/images/projects/visualjs-light.png"
+coverImageDark: "/images/projects/visualjs-dark.png"
+year: "2025"
+role: "Creator & Solo Engineer"
+liveUrl: "https://visualjs.in"
+featured: false
+publishedAt: "2025-04-01"
+problem: "Beginners struggle with JavaScript because code is abstract. They can't see the call stack, scope chain, closures, or memory. Existing tutorials are text-heavy and passive. No tool lets you watch real code execute step-by-step with memory visualization."
+solution: "Built an interactive platform with 85 chapters across 12 modules powered by a custom execution engine. User code is parsed into an AST, instrumented with trace calls, executed in a sandboxed Web Worker, and the resulting events are reduced into navigable snapshots, all rendered as interactive visualizations with React Flow."
+impact: "85 chapters of structured curriculum. 12 progressive modules. Custom code visualizer with memory model, call stack, scope chain, and async visualization. Free forever with zero backend, all progress stored client-side."
+metrics:
+  - label: "Chapters"
+    value: "85"
+  - label: "Modules"
+    value: "12"
+  - label: "Core Engine"
+    value: "~8k LOC"
+  - label: "Price"
+    value: "Free"
+techStack: ["Next.js 16", "React 19", "TypeScript 5", "Babel", "Web Workers", "React Flow", "Dagre", "Zustand", "Monaco Editor", "Framer Motion", "Tailwind CSS 4", "Vitest"]
+---
+
+## Why I Built This
+
+Most JavaScript tutorials explain closures with a paragraph and a diagram. VisualJS lets you **watch** a closure form: see the scope chain link, observe the outer variable survive garbage collection, watch the inner function capture its environment in real time.
+
+This is not a video. It is a **custom JavaScript runtime** that instruments any code for step-by-step visual execution. [visualjs.in](https://visualjs.in) combines a structured curriculum (~85 chapters across 12 modules) with that engine. Everything runs in the browser. User code never leaves the device.
+
+## High-Level Overview
+
+VisualJS splits cleanly into a presentation layer (Next.js App Router) and a framework-agnostic core engine (`src/`). Chapter pages, the visualizer, and special tools sit in `app/`. Parsing, instrumentation, sandboxed execution, snapshot reduction, and pedagogy live in `src/`. Curriculum data and persisted user preferences connect both sides.
+
+```
+Presentation (Next.js)              Core Engine (src/)           Data
+──────────────────────              ──────────────────           ────
+Chapter pages (85 routes)    ──►    Parser (Babel AST)
+/visualizer                  ──►    Instrumentation (__trace)
+Special tools                ──►    Runtime (Web Worker)
+Root layout (sidebar, SEO)   ──►    Snapshot (state reducers)
+                             ──►    Pedagogy (explanations, why-engine)
+
+app/_data/chapters           ◄── curriculum
+app/_store (Zustand)         ◄── progress, theme, streaks
+```
+
+The Next.js layer handles routing, SEO, and learning UX. The `src/` engine handles parsing, execution tracing, state reconstruction, and pedagogical explanation. All client-side.
+
+## Tech Stack
+
+**Framework:** Next.js 16 (App Router), React 19.
+
+**Language:** TypeScript 5, strict mode.
+
+**Styling:** Tailwind CSS 4, shadcn/ui, Radix UI.
+
+**State:** Zustand for persisted user preferences only. Tool execution state stays in hooks.
+
+**AST / Code:** `@babel/parser`, `@babel/traverse`, `@babel/generator`, acorn.
+
+**Editor:** Monaco Editor via `@monaco-editor/react`.
+
+**Visualization:** React Flow, `@dagrejs/dagre`, Framer Motion.
+
+**Testing:** Vitest.
+
+**Deployment:** Vercel at visualjs.in. Package manager: pnpm.
+
+## Repository Structure
+
+```
+visualjs/
+├── app/                    # Next.js App Router (routes + colocated UI)
+│   ├── _components/        # Shared app-level components (45 files)
+│   ├── _data/              # Curriculum, quizzes, walkthroughs, SEO
+│   ├── _hooks/             # Shared hooks
+│   ├── _lib/               # Metadata generators, chapter helpers
+│   ├── _store/             # Global Zustand stores (9 stores)
+│   ├── [chapter]/          # ~85 chapter routes (e.g. /variables)
+│   ├── learn/[slug]/       # Module landing pages
+│   ├── visualizer/         # Main code visualizer app
+│   ├── playground/         # Monaco editor workspace
+│   ├── memory-engine/      # GC / object lifecycle tool
+│   ├── execution-compare/  # Side-by-side execution comparison
+│   ├── debug/              # Internal runtime debug panels
+│   ├── api/og/             # Dynamic OG image generation
+│   ├── layout.tsx          # Root shell
+│   ├── page.tsx            # Homepage
+│   ├── sitemap.ts          # SEO sitemap
+│   └── robots.ts           # Crawler rules
+│
+├── src/                    # Domain engine (framework-agnostic core)
+│   ├── instrumentation/    # AST transforms + Babel visitors
+│   ├── runtime/            # Execution, worker sandbox, events
+│   ├── snapshot/           # State model + reducers + timeline
+│   ├── pedagogy/           # Explanations, causality, misconceptions
+│   ├── parser/             # AST parsing, IR, scope analysis
+│   ├── shared/             # Shared utilities
+│   └── types/              # Core type contracts
+│
+├── components/ui/          # shadcn primitives (Button, Dialog, Tabs, Card)
+├── lib/utils.ts            # cn() helper
+├── public/                 # Static assets, service worker, dark-mode script
+├── scripts/                # SEO/content generation scripts
+├── tests/                  # Vitest (instrumentation, runtime, snapshot, pedagogy)
+└── docs/ast/               # AST node documentation
+```
+
+Path alias: `@/*` maps to project root via `tsconfig.json`.
+
+## The Execution Pipeline
+
+This is the heart of VisualJS: how user code becomes visual, step-by-step state.
+
+```
+User clicks Run
+    → executeCode(source)
+    → validateCode() advisory lint
+    → instrumentCode(): parse AST, inject __trace() calls
+    → Web Worker sandbox (5s timeout, 10k event cap)
+    → RuntimeEvent[] stream
+    → SnapshotEngine.buildFromEvents()
+    → applyEvent() per step (keyframe compression)
+    → Snapshot[] timeline
+    → explainStep(snapshot, prev) → human-readable narration
+    → Rendered UI
+```
+
+### Instrumentation (`src/instrumentation/`)
+
+User source transforms before execution by injecting `__trace()` calls at semantic boundaries.
+
+```
+Source Code
+    ↓ @babel/parser
+  AST (File)
+    ↓ multi-pass @babel/traverse
+  Visitors (per node type):
+    variable-declaration, assignment-expression
+    function-enter, function-call, return-statement
+    if-statement, loop-statement, switch-statement
+    async-function, await-expression
+    class-declaration, prototype-access, this-binding
+    try-statement, gc-tracking, module-tracking
+    ↓ @babel/generator
+  Instrumented Code + lineMap (generated→original line mapping)
+```
+
+Key file: `src/instrumentation/transforms/instrument.ts`.
+
+```javascript
+// What the user writes:
+function greet(name) {
+  const message = `Hello, ${name}!`;
+  return message;
+}
+const result = greet("world");
+```
+
+```javascript
+// What the engine executes (simplified):
+__trace({ type: "function-enter", name: "greet", args: ["world"], line: 1 });
+__trace({ type: "variable-declaration", name: "message", value: "Hello, world!", scope: "greet", line: 2 });
+__trace({ type: "return", value: "Hello, world!", from: "greet", line: 3 });
+__trace({ type: "function-exit", name: "greet", line: 4 });
+__trace({ type: "variable-declaration", name: "result", value: "Hello, world!", scope: "global", line: 5 });
+```
+
+Instrumentation covers ES2024+ features: closures, prototypes, async/await, generators, classes, destructuring, and more.
+
+### Runtime (`src/runtime/`)
+
+**executor.ts** orchestrates lint, instrument, and worker dispatch.
+
+**worker-executor.ts** runs sandboxed code in a Web Worker with no DOM, a 5-second timeout, and a 10,000-event cap.
+
+**policy.ts** provides advisory code validation before execution.
+
+Event modules split by domain:
+
+- **events/core.ts:** variables, functions, loops, objects, console
+- **events/async.ts:** promises, microtasks, macrotasks, await
+- **events/advanced.ts:** generators, prototypes, classes, GC, modules
+
+```typescript
+// src/runtime/worker-executor.ts
+const worker = new Worker("sandbox.js");
+
+worker.postMessage({
+  code: instrumentedCode,
+  timeout: 5000,
+  eventCap: 10_000,
+});
+
+worker.onmessage = (e) => {
+  handleEvents(e.data.events); // RuntimeEvent[] flat stream
+};
+```
+
+User code never runs on the main thread. Hard limits prevent infinite loops and memory exhaustion.
+
+### Snapshot Engine (`src/snapshot/`)
+
+Converts flat `RuntimeEvent[]` into navigable `Snapshot[]` for timeline scrubbing.
+
+**State model** (`state-model.ts`): variables, scopes, call stack frames, heap objects (objects, arrays, functions), console output, async state (promises, microtasks, macrotasks), prototype chains, class instances, GC marks.
+
+**Reducers** (`state-reducer.ts` delegates to domain sub-reducers):
+
+- `reducers/variables.ts`
+- `reducers/functions.ts`
+- `reducers/control-flow.ts`
+- `reducers/async.ts`
+- `reducers/advanced.ts`
+
+```typescript
+type RuntimeState = {
+  variables: Map<string, Variable>;
+  callStack: StackFrame[];
+  heap: Map<string, HeapObject>;
+  scopes: ScopeChain;
+  console: ConsoleEntry[];
+  async: AsyncState;
+};
+
+function applyEvent(state: RuntimeState, event: RuntimeEvent): RuntimeState {
+  switch (event.type) {
+    case "variable-declaration":
+      return variableReducer(state, event);
+    case "function-enter":
+      return functionReducer(state, event);
+    case "function-exit":
+      return stackPopReducer(state, event);
+    // 30+ event types handled
+  }
+}
+```
+
+**Memory optimization:** keyframe compression every 64 steps plus LRU cache (max 16 replays). To jump to step 200: load keyframe at 192, replay 8 events.
+
+### Pedagogy Layer (`src/pedagogy/`)
+
+Turns machine state into teaching content. Public API: `src/pedagogy/index.ts` (~250 exports).
+
+**explain-event.ts** provides step-by-step narration.
+
+**explain-memory.ts** and **explain-control-flow.ts** cover heap/stack and branch/loop narration.
+
+**causality/** builds dependency graphs and "why" tracing.
+
+**why/** tracks variable origin, mutation history, and call chains.
+
+**ask-why/** is the universal "Ask Why" router.
+
+**misconceptions/** detects common JS mistakes and explains the correct mental model.
+
+**closure-engine.ts** visualizes closure capture. **reference-engine.ts** shows alias and mutation impact.
+
+**execution-story.ts** produces narrative chapter beats. **learning-summary.ts** generates post-run takeaways.
+
+```typescript
+// src/pedagogy/explain-event.ts
+explainStep(current, previous) → {
+  narration: "Variable `message` is assigned inside the `greet` function scope.",
+  concept: "template-literals",
+  highlight: { line: 2, scope: "greet" },
+  causality: ["name parameter received 'world'", "template literal evaluated"]
+}
+```
+
+Explanations are computed from snapshots, not hardcoded per example.
+
+### Parser (`src/parser/`)
+
+Secondary AST analysis, separate from instrumentation:
+
+- `parse.ts` with shared Babel parse options
+- `scope-analyzer.ts`, `reference-analyzer.ts`
+- `execution-order.ts`, `node-registry.ts`
+- `ir/build-ir.ts` for intermediate representation used in flowcharts
+
+## Presentation Layer (Next.js)
+
+### Routing
+
+**/** Homepage with curriculum grid, progress, streaks.
+
+**/[chapter-slug]** Individual lessons (`/variables`, `/closures`, ~85 chapters).
+
+**/learn/[module-slug]** Module landing pages (12 modules).
+
+**/visualizer** Full interactive code debugger.
+
+**/playground** Monaco workspace to write and visualize.
+
+**/memory-engine** GC, circular refs, object lifecycles.
+
+**/execution-compare** Side-by-side execution playback.
+
+**/study-plan**, **/review**, **/streak** for spaced repetition and achievements.
+
+**/debug/runtime** Internal raw event inspector.
+
+Each chapter route follows the same shell:
+
+```typescript
+// app/variables/page.tsx pattern
+export const metadata = generateChapterMetadata("/variables");
+
+export default function VariablesPage() {
+  return (
+    <main>
+      <Breadcrumbs />
+      <h1>{getChapterH1("/variables")}</h1>
+      <ChapterIntro slug="/variables" />
+      <TableOfContents items={[...]} />
+      <VariablesContent />
+      <ChapterNav />
+    </main>
+  );
+}
+```
+
+Route-per-chapter gives SEO, independent caching, and code splitting. Not a single SPA with 85 tabs.
+
+### Root Layout Shell
+
+`app/layout.tsx` wraps every page with:
+
+**Navigation:** ChapterSidebar, MobileNav, SearchDialog.
+
+**Reader UX:** ScrollProgress, ReaderSettings, ChapterBookmark.
+
+**Learning:** VisualizerFAB, KeyboardShortcuts.
+
+**SEO:** JSON-LD (WebApplication, Organization, Course), structured data injectors.
+
+**PWA:** ServiceWorkerRegistration, dark-mode FOUC prevention script.
+
+**Analytics:** optional GA, env-gated.
+
+### Visualizer App (`app/visualizer/`)
+
+Heavy client bundle, lazy-loaded via `next/dynamic` with `ssr: false`:
+
+```typescript
+const VisualizerClient = dynamic(
+  () => import("./_components/visualizer-client"),
+  { ssr: false }
+);
+```
+
+**VisualizerApp** structure:
+
+- CodeEditor (Monaco)
+- `useProgramRunner` → `executeCode` → SnapshotEngine
+- Flow panels: Timeline, FlowCanvas, Flowchart
+- ExecutionContextPanel, HeapGraph
+- ClosurePanel, ReferenceGraphPanel
+- CausalChainPanel, ExplanationPanel
+- MemoryStoryPanel, StateEvolutionPanel
+- ConsoleOutput, KeyboardHints
+
+**Hooks:** `useProgramRunner`, `useKeyboardShortcuts`, `useSmartCamera`, `useExport`, `useShareURL`.
+
+The UI never reads raw AST at runtime. It reads Snapshot state derived from events.
+
+## Curriculum Data Layer
+
+### Content model
+
+```typescript
+// app/_data/chapters/types.ts
+type Chapter = {
+  slug: string;           // "/variables"
+  title: string;
+  module: number;         // 1–12
+  summary?, whyItMatters?, useCases?, faqs?;
+  seoTitle?, seoDescription?, keywords?, h1Title?;
+};
+
+type Module = {
+  id: number;
+  slug: string;           // "getting-started"
+  title: string;
+  description?, intro?, seoTitle?, seoDescription?, keywords?;
+};
+```
+
+12 modules, ~85 chapters, split across `module-1.ts` through `module-12.ts`, aggregated in `chapters/index.ts`. Topics span basics through control flow, functions, data structures, async, DOM, React/Next.js, projects, and advanced topics.
+
+### Supporting data
+
+**quizzes.ts** holds chapter quiz questions.
+
+**walkthroughs.ts** provides guided code walkthroughs.
+
+**visualizer-seo.ts** defines visualizer page SEO keywords.
+
+**h1-titles.json** stores H1 title overrides.
+
+### SEO pipeline
+
+`generate-chapter-metadata.ts` and `generate-module-metadata.ts` produce per-route metadata.
+
+`ChapterStructuredData` and `ModuleStructuredData` inject JSON-LD.
+
+`ChapterFAQ` renders visible FAQ content that doubles as FAQPage schema (Google requirement).
+
+`scripts/generate-chapter-seo.mjs` batch-generates SEO content.
+
+`app/sitemap.ts` auto-generates from the chapter and module registry.
+
+## State Management
+
+Zustand handles cross-page user preferences only, persisted to localStorage:
+
+- **use-theme-store:** light/dark/system theme
+- **use-progress-store:** completed chapter slugs
+- **use-streak-store:** daily study streak
+- **use-bookmark-store:** chapter bookmarks
+- **use-spaced-rep-store:** spaced repetition queue
+- **use-study-plan-store:** custom study plan
+- **use-pomodoro-store:** Pomodoro timer
+- **use-code-theme-store:** Monaco editor theme
+- **achievements.ts:** achievement definitions
+
+Feature-local stores stay colocated: `app/visualizer/_store/`, `app/memory-engine/_store/`, `app/execution-compare/_store/`, `app/playground/_store/`, and route-specific stores like `app/arrays/_store/`.
+
+Tool execution state lives in hooks (`useProgramRunner` uses `useState`), not global Zustand. Zero backend: no database, no auth, no API.
+
+## UI Component Architecture
+
+**components/ui/** generic shadcn primitives, theme-aware and accessible.
+
+**app/_components/** app-wide feature components (nav, SEO, learning UX).
+
+**app/[route]/_components/** route-specific content (`VariablesContent`, etc.).
+
+**app/visualizer/_components/flow/** visualizer-specific panels.
+
+Design rules: Server Components by default. `'use client'` only at interaction leaves. WCAG 2.2 AA, semantic HTML, keyboard navigation. Theme tokens (`bg-background`, `text-foreground`), no hardcoded colors. Components under 200 lines preferred.
+
+## Closure Example
+
+How VisualJS handles the classic closure gotcha:
+
+```javascript
+function createCounter() {
+  let count = 0;
+  return {
+    increment: () => ++count,
+    getCount: () => count,
+  };
+}
+
+const counter = createCounter();
+counter.increment();
+counter.increment();
+console.log(counter.getCount()); // 2
+```
+
+Step by step in the visualizer:
+
+1. `createCounter` executes and creates `count` in its scope
+2. Two arrow functions are created and both capture the `count` binding
+3. `createCounter` returns, but its scope survives (closure)
+4. `increment()` modifies the captured `count`, visible in the heap graph
+5. `getCount()` reads the same captured binding
+
+Users scrub the timeline back and forth to watch this frame-by-frame.
+
+## Async and Event Loop
+
+```javascript
+console.log("1: synchronous");
+
+setTimeout(() => {
+  console.log("3: macrotask");
+}, 0);
+
+Promise.resolve().then(() => {
+  console.log("2: microtask");
+});
+
+console.log("4: synchronous");
+// Output: 1, 4, 2, 3
+```
+
+The UI renders live panels for call stack enter/exit, microtask queue, macrotask queue, and animated execution order showing why microtasks fire before macrotasks. Something no textbook diagram can do as clearly.
+
+## Testing
+
+```
+tests/
+├── instrumentation/   # AST transform correctness
+├── runtime/           # Execution + event emission
+├── snapshot/          # State reducer + async state
+└── pedagogy/          # Explanation engines, why-system, causality
+```
+
+Vitest covers all four engine layers via `vitest.config.ts`.
+
+## Build and Scripts
+
+**pnpm dev** runs the Next.js dev server.
+
+**pnpm build** runs production build (8GB heap for large route count).
+
+**scripts/generate-chapter-seo.mjs** regenerates module chapter files with SEO.
+
+**scripts/migrate-chapter-faqs.mjs** is the FAQ migration utility.
+
+**public/sw.js** is the service worker for offline support.
+
+## Curriculum Map (12 Modules)
+
+**1. getting-started:** variables, types, operators, console.
+
+**2. control-flow:** conditionals, loops, nested control.
+
+**3. functions:** parameters, closures, arrow functions.
+
+**4. data-structures:** arrays, objects, strings, collections.
+
+**5. scope-memory:** hoisting, execution context, call stack.
+
+**6. advanced-js:** destructuring, spread, optional chaining.
+
+**7. async:** promises, async/await, event loop.
+
+**8. dom-browser:** DOM, events, storage, Web APIs.
+
+**9. es6-modern:** classes, modules, prototypes.
+
+**10. projects:** todo app, calculator, quiz app, and more.
+
+**11. frameworks:** React, Next.js, Node.js intro.
+
+**12. advanced-topics:** performance, security, testing, patterns.
+
+## Key Architectural Decisions
+
+**Engine/UI separation.** `src/` is framework-agnostic and testable in isolation. `app/` is Next.js presentation only.
+
+**Event-sourced visualization.** UI reads Snapshot state, never raw AST at runtime.
+
+**Worker sandbox.** All user code runs isolated with hard time and event limits.
+
+**Keyframe snapshots.** Memory-efficient timeline for long executions (64-step keyframes).
+
+**Route-per-chapter.** Each of 85 chapters is its own Next.js route for SEO, not one SPA.
+
+**Colocated private folders.** `_components`, `_store`, `_hooks` per route keep features self-contained.
+
+**Privacy-first.** No server-side code execution. User code never leaves the browser.
+
+**Pedagogy as a layer.** Explanations computed from snapshots, not hardcoded per example.
+
+**Babel over Acorn.** Full ES2024+ support for arbitrary user code.
+
+**React Flow.** Graph visualization with pan, zoom, and custom nodes.
+
+**No backend.** Zero ops cost. User owns their data.
+
+## Where It Stands
+
+- **85 interactive chapters** across **12 progressive modules**
+- **~8,000 lines** of framework-agnostic engine code in `src/`
+- **30+ event types** instrumented across all JS features
+- **Custom pedagogy engine** with ~250 exported explanation APIs
+- **Free forever:** no paywalls, no premium tier
+- **Privacy-first:** user code never leaves the browser
+- **Full test suite:** Vitest covering instrumentation, runtime, snapshot, and pedagogy
+- **Deployed** at [visualjs.in](https://visualjs.in) on Vercel

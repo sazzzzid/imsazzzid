@@ -1,0 +1,658 @@
+---
+title: "StreamIQ"
+description: "A modular, headless browser streaming SDK published as the @streamiq/* npm org. SDK-only, with no shipped product app."
+excerpt: "Composable layers from headless core to optional cinematic preset. Typed events, enforced package boundaries, lazy HLS/DASH engines, and React bindings that never fight your UI."
+category: "Open Source / SDK"
+tags: ["TypeScript", "React", "Video", "Monorepo"]
+coverImage: "/images/projects/streamiq-light.png"
+coverImageDark: "/images/projects/streamiq-dark.png"
+year: "2025"
+role: "Creator & Maintainer"
+liveUrl: "https://www.npmjs.com/org/streamiq"
+featured: true
+publishedAt: "2026-05-28"
+problem: "React video players bundle playback logic, adaptive streaming, and UI into one bloated component. Integrators can't pick only what they need, can't build custom chrome without fighting CSS overrides, and end up shipping hls.js or Shaka even when they only need headless control."
+solution: "Designed Streamq as a 15-package @streamiq npm org: @streamiq/core (headless engine), @streamiq/hls + @streamiq/dash (lazy adapters), @streamiq/react + @streamiq/ui (bindings + render-only primitives), @streamiq/player (cinematic preset), @streamiq/shared + @streamiq/themes (zero-dep support), and a plugin family led by @streamiq/plugin-drm. CI enforces dependency boundaries so layers can't drift."
+impact: "15 packages in the @streamiq npm org, 9 published at v1.1.x. Headless core, HLS/DASH adapters, React bindings, render-only UI, cinematic preset, and a plugin family. Lazy-loaded hls.js and shaka-player."
+metrics:
+  - label: "npm org"
+    value: "15"
+  - label: "Published"
+    value: "9"
+  - label: "Hooks"
+    value: "40+"
+  - label: "Core size"
+    value: "~5kB"
+techStack: ["TypeScript", "React", "mitt", "hls.js", "shaka-player", "Turborepo", "Vitest", "Playwright"]
+---
+
+## Why I Built This
+
+Most browser video libraries ship a product, not a toolkit. You import `<Player />`, inherit someone else's chrome, and spend the next sprint fighting CSS overrides until it vaguely matches your brand. Want headless playback inside a dashboard widget? You still pull in a full UI layer. Need DASH but not HLS? Both engines land in your bundle anyway.
+
+Streamq takes the opposite approach. It is SDK-only: no product app, no opinionated player shell. Everything lives under the [`@streamiq/*` npm org](https://www.npmjs.com/org/streamiq), maintained by [@imsazzzid](https://www.npmjs.com/~imsazzzid). Integrators pick the layers they actually need, from a framework-agnostic headless core up to an optional cinematic preset. Playback truth stays in one place. Your product chrome stays yours.
+
+## The Package Line-up
+
+The `@streamiq` org defines **15 scoped packages**. **Nine are live on npm** at `v1.1.0` (`@streamiq/player` is at `v1.1.1`). The other six are org-reserved names for the plugin family and a meta package. They exist in the monorepo and will publish on the same semver train.
+
+**Engine.** [`@streamiq/core`](https://www.npmjs.com/package/@streamiq/core) (`1.1.0`) is the headless streaming playback SDK: Player, FSM, events, and adapters. No React, no product UI. It owns the state machine, typed event bus, adapter contract, subtitle runtime, plugin manager, source failover, and the transport API.
+
+**Adapters.** [`@streamiq/hls`](https://www.npmjs.com/package/@streamiq/hls) (`1.1.0`) handles HLS with lazy hls.js and a Safari native fallback. [`@streamiq/dash`](https://www.npmjs.com/package/@streamiq/dash) (`1.1.0`) handles DASH with lazy shaka-player. Both sit on `@streamiq/core` and `@streamiq/shared`. Heavy engines load through dynamic `import()` at the adapter boundary, so they never inflate the core bundle.
+
+**Presentation.** [`@streamiq/react`](https://www.npmjs.com/package/@streamiq/react) (`1.1.0`) ships React bindings: `StreamqProvider`, external stores, RAF-batched bindings, and 40+ granular hooks. [`@streamiq/ui`](https://www.npmjs.com/package/@streamiq/ui) (`1.1.0`) is render-only: controls, overlays, menus, sliders, subtitle rendering, and layout. It does not orchestrate playback and ships no CSS.
+
+**Preset.** [`@streamiq/player`](https://www.npmjs.com/package/@streamiq/player) (`1.1.1`) wires everything together: layouts, gestures, keyboard handling, visibility policy, overlay management, settings menus, and a separate UI state machine. Optional. You do not need it to use the SDK.
+
+**Support.** [`@streamiq/shared`](https://www.npmjs.com/package/@streamiq/shared) (`1.1.0`) holds dependency-free utilities: low-latency policy validation, offline types, and helpers like `clamp` and `raceAbort`. [`@streamiq/themes`](https://www.npmjs.com/package/@streamiq/themes) (`1.1.0`) ships optional `--sq-*` CSS tokens with zero playback dependencies.
+
+**Plugins.** [`@streamiq/plugin-drm`](https://www.npmjs.com/package/@streamiq/plugin-drm) (`1.1.0`) is published and handles Widevine, FairPlay, and PlayReady via Shaka license server wiring. The rest are org-reserved in the monorepo: `plugin-analytics` (QoE metrics), `plugin-thumbnails` (VTT seek previews), `plugin-casting` (AirPlay and Chromecast), `plugin-ads` (ads lifecycle shell), `plugin-media-session` (lock screen metadata), and `plugins` (meta re-export). Plugins attach through `PluginManager`, listen to public `PlayerEvents`, and never extend `PlayerOptions`. Only `plugin-drm` also depends on `@streamiq/dash`.
+
+### Getting started
+
+```bash
+# Tier 1: headless
+npm i @streamiq/core @streamiq/hls
+
+# Tier 2: React + custom UI
+npm i @streamiq/core @streamiq/react @streamiq/ui @streamiq/hls @streamiq/themes
+
+# Tier 3: cinematic preset
+npm i @streamiq/player @streamiq/themes
+
+# DRM (DASH only)
+npm i @streamiq/dash @streamiq/plugin-drm
+```
+
+## Design Principles
+
+Five rules govern every decision in the codebase.
+
+**Headless core.** Playback truth lives in `@streamiq/core`. No React, no product UI.
+
+**Composable layers.** Apps install only what they need. Everything tree-shakes.
+
+**Event-driven.** Adapters, plugins, and React hooks talk through typed `PlayerEvents`.
+
+**Enforced boundaries.** CI blocks forbidden `@streamiq/*` dependency edges on every build.
+
+**Lazy heavy deps.** `hls.js` and `shaka-player` load dynamically at the adapter boundary.
+
+The biggest long-term risk in a layered SDK is **architectural drift**: React slowly leaking into core, `@streamiq/shared` turning into a junk drawer, adapters exposing hls.js or Shaka types on the public API, or one monolithic component owning playback, UI, and UX policy all at once.
+
+Streamq treats drift as a build failure, not a code review argument. Maintainer docs in `docs/architecture/architectural-drift.md` catalog known failure modes. CI enforces the dependency graph through `tooling/scripts/check-package-boundaries.mjs`.
+
+## How the Layers Connect
+
+Packages stack in strict tiers. Dependencies always flow down toward core, never sideways or upward.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     CONSUMER APP                                 │
+│         Your layout · product chrome · business logic            │
+└───────┬──────────────┬──────────────┬──────────────┬────────────┘
+        │              │              │              │
+        ▼              ▼              ▼              ▼
+   @streamiq/     @streamiq/     @streamiq/     @streamiq/
+     player          react            ui          themes
+   (optional        (hooks,       (render-      (CSS tokens,
+    preset)          stores)       only UI)       zero deps)
+        │              │              │
+        └──────┬───────┴──────┬───────┘
+               │              │
+               ▼              ▼
+          @streamiq/hls   @streamiq/dash
+          (lazy hls.js)   (lazy shaka)
+               │              │
+               └──────┬───────┘
+                      ▼
+               @streamiq/core
+          Player · FSM · events · subtitles
+                      │
+        ┌─────────────┼─────────────────────────────┐
+        ▼             ▼                             ▼
+   @streamiq/    @streamiq/plugin-drm      @streamiq/plugin-analytics
+     shared       plugin-thumbnails         plugin-casting …
+   (zero deps)   (via PluginManager on core; @streamiq/plugins meta)
+```
+
+Allowed dependency edges: `core`, `shared`, and `themes` depend on nothing. `hls` and `dash` depend on `core` and `shared`. `react` depends on `core`. `ui` depends on `react`. `player` depends on `react`, `ui`, `hls`, and `dash`. The `plugins` meta package and every plugin except `plugin-drm` depend on `core` alone. `plugin-drm` also depends on `dash`. If `core` tried to import `@streamiq/react`, the build would fail before merge.
+
+## Inside the Monorepo
+
+```
+streamq/
+├── packages/
+│   ├── core/              Headless Player, FSM, events, adapter contract, subtitles, DRM types
+│   ├── shared/            Dependency-free utilities (low-latency policy, offline types)
+│   ├── themes/            CSS design tokens + theme applier
+│   ├── hls/               HLS adapter (lazy hls.js, Safari native fallback)
+│   ├── dash/              DASH adapter (lazy shaka-player, multi-DRM)
+│   ├── react/             Provider, external stores, RAF bindings, granular hooks
+│   ├── ui/                Render-only React primitives (controls, seekbar, menus, overlays)
+│   ├── player/            @streamiq/player: cinematic preset + UX orchestration
+│   └── plugins/
+│       ├── drm/           @streamiq/plugin-drm (published)
+│       ├── analytics/     @streamiq/plugin-analytics (org-reserved)
+│       ├── thumbnails/    @streamiq/plugin-thumbnails (org-reserved)
+│       ├── casting/       @streamiq/plugin-casting (org-reserved)
+│       ├── ads/           @streamiq/plugin-ads (org-reserved)
+│       ├── media-session/ @streamiq/plugin-media-session (org-reserved)
+│       └── index/         @streamiq/plugins meta re-export
+│
+├── examples/
+│   └── player-playground/ Local Vite harness (private, not published)
+│
+├── e2e/                   Playwright integration suite (vanilla TS harness)
+├── tooling/               Biome, TS presets, boundary checker
+├── docs/architecture/     Maintainer architecture docs (25+ topics)
+└── .cursor/rules/         Persistent AI/dev conventions
+```
+
+The build stack runs on pnpm 10 workspaces, Turborepo 2, tsup for libraries, Vite for React-bundled packages, Vitest, Playwright, Biome 2, and Changesets for independent package versioning.
+
+## The Core Engine
+
+`@streamiq/core` is where playback actually happens. A single `Player` class orchestrates everything headlessly over `HTMLMediaElement`. No framework. No DOM beyond `<video>` and `<audio>`.
+
+### Module map
+
+```
+packages/core/src/
+├── player/           Player, config, lifecycle, load recovery, destroy
+├── state/            StateMachine, transitions, PlaybackState FSM
+├── events/           mitt-based EventBus, PlayerEvents type map
+├── adapters/         PlaybackAdapter contract, NativeAdapter, BaseAdapter
+├── source/           Source resolution, validation, failover chains
+├── tracks/text/      TextTrackManager, CueSynchronizer, WebVTT parser
+├── playback/         Live edge, PiP, qualities, audio tracks
+├── plugins/          PluginManager, StreamqPlugin lifecycle
+├── drm/              Generic DRM types + media registry (format-agnostic)
+├── errors/           Typed error hierarchy (Playback, Network, DRM, Subtitle)
+└── performance/      PerformanceMonitor
+```
+
+### One state machine, not a pile of booleans
+
+Instead of juggling `isPlaying`, `isLoading`, and `isBuffering` flags that drift out of sync, core runs a single finite state machine:
+
+```
+                    ┌──────────────────────────────────┐
+                    │                                  │
+                    ▼                                  │
+  idle ──→ loading ──→ ready ◄──► playing ◄──► buffering ──→ ended
+                    │    │           │           │
+                    │    │           ▼           ▼
+                    │    └──────→ paused         │
+                    │                            │
+                    └──────── error ◄──────────────┘
+```
+
+States: `idle`, `loading`, `ready`, `playing`, `paused`, `buffering`, `ended`, `error`.
+
+Adapters emit raw engine signals. Core's `StateMachine` decides the canonical state and fires `playbackstatechange`. React hooks read that state. They never recompute it on their own.
+
+### What Player owns
+
+The `Player` class orchestrates seven subsystems: the FSM with validated transitions, a mitt event bus with typed `PlayerEvents`, adapter lifecycle (load, teardown, recovery), `TextTrackManager` for subtitles, `PluginManager` for registered plugins, source resolution with CDN failover, and the transport API (`load`, `play`, `pause`, `seek`, `destroy`, and the rest).
+
+```typescript
+// Conceptual Player surface (simplified)
+class Player {
+  constructor(options: PlayerOptions) {
+    this.fsm = new StateMachine('idle');
+    this.events = mitt<PlayerEvents>();
+    this.adapter = options.createPlaybackAdapter(this);
+    this.textTracks = new TextTrackManager(this);
+    this.plugins = new PluginManager(this);
+  }
+
+  async load(source: SourceInput): Promise<void> {
+    this.fsm.transition('loading');
+    const resolved = await this.sourceResolver.resolve(source);
+    await this.adapter.load(resolved);
+    // adapter emits events → fsm transitions → core emits playbackstatechange
+  }
+
+  destroy(): void {
+    this.plugins.destroyAll();
+    this.adapter.destroy();
+    this.events.all.clear();
+    this.fsm.transition('idle');
+  }
+}
+```
+
+### The adapter contract
+
+Every playback provider implements `PlaybackAdapter`. HLS lives in `@streamiq/hls` with lazy hls.js and a Safari native fallback. DASH lives in `@streamiq/dash` with lazy shaka-player and multi-DRM. Progressive MP4 uses `NativeAdapter` inside core. Adapters are injected through a factory, never hardcoded.
+
+```typescript
+interface PlaybackAdapter {
+  load(source: ResolvedSource): Promise<void>;
+  play(): Promise<void>;
+  pause(): void;
+  seek(time: number): void;
+  setVolume(volume: number): void;
+  destroy(): void;
+  // Signal core via events ONLY. Never mutate player state directly.
+}
+
+import { Player } from '@streamiq/core';
+import { createHlsPlaybackAdapter } from '@streamiq/hls';
+
+const player = new Player({
+  target: videoElement,
+  createPlaybackAdapter: createHlsPlaybackAdapter,
+});
+```
+
+Heavy engines load at the adapter boundary:
+
+```typescript
+// Inside @streamiq/hls. The engine never touches core's bundle.
+async function loadEngine() {
+  const Hls = (await import('hls.js')).default;
+  return new Hls(config);
+}
+```
+
+`@streamiq/core` ships at roughly 5kB. hls.js (~240kB) and shaka-player (~300kB) only load when the integrator picks that adapter.
+
+### Source resolution and recovery
+
+Core does more than pass a URL to an adapter. The `source/` module validates inputs, resolves manifests, and walks failover chains:
+
+```
+load({ url: primary, fallbacks: [cdn2, cdn3] })
+    → validate source shape
+    → try primary CDN
+    → on network error → emit sourcerecovery → try fallback[0]
+    → on success → adapter.load(resolved)
+    → on exhaustion → fsm.transition('error') + typed PlaybackError
+```
+
+Integrators get resilient playback without reimplementing retry logic in every app.
+
+## Events
+
+Everything talks through a typed mitt bus: in-process, lightweight, and the only runtime dependency in core.
+
+Playback events include `play`, `pause`, `timeupdate`, `ended`, and `error`. State changes surface as `playbackstatechange`. Buffering has `bufferingstart` and `bufferingend`. Text tracks emit `texttrackschange`, `texttrackchange`, `cuechange`, and `subtitlestylechange`. Quality changes use `qualitieschange` and `qualitychange`. PiP uses `pipchange`. CDN failover emits `sourcerecovery`.
+
+Three rules keep the system honest.
+
+**Adapters normalize. They never expose engine types.**
+
+```typescript
+// Inside @streamiq/hls adapter (internal)
+hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+  player.events.emit('qualitychange', {
+    id: data.level,
+    bitrate: levels[data.level].bitrate,
+    // Normalized shape. No Hls types leak to consumers.
+  });
+});
+```
+
+**Plugins subscribe to public events only.**
+
+```typescript
+const analyticsPlugin: StreamqPlugin = {
+  setup(player) {
+    const onPlay = () => trackEvent('play');
+    const onError = (e: PlaybackError) => trackEvent('error', e.code);
+    player.events.on('play', onPlay);
+    player.events.on('error', onError);
+    return () => {
+      player.events.off('play', onPlay);
+      player.events.off('error', onError);
+    };
+  },
+  destroy() { /* idempotent cleanup */ },
+};
+```
+
+**React hooks subscribe to granular events, not full state mirrors.**
+
+A volume hook listens to `volumechange`. It does not subscribe to the entire bus. That is what makes 60fps `timeupdate` safe inside React.
+
+## Subtitles
+
+Subtitles are core infrastructure, not a plugin. One runtime, one cue synchronizer, no duplication across packages.
+
+```
+┌─────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│   Adapter   │────►│  TextTrackManager    │────►│ CueSynchronizer │
+│  discovers  │     │  mergeFromAdapter()  │     │ active cue @    │
+│   tracks    │     │  hydrate sidecar VTT │     │ currentTime     │
+└─────────────┘     └──────────────────────┘     └────────┬────────┘
+                                                          │
+                        ┌─────────────────────────────────┘
+                        ▼
+              ┌──────────────────┐     ┌──────────────────┐
+              │  React cueStore  │────►│  SubtitleLayer   │
+              │  (cueBindings)   │     │  (@streamiq/ui)  │
+              └──────────────────┘     └──────────────────┘
+```
+
+The pipeline in order:
+
+1. HLS or DASH adapter discovers embedded or manifest-referenced text tracks
+2. `TextTrackManager.mergeFromAdapter()` deduplicates and normalizes metadata
+3. Sidecar `.vtt` files get fetched and parsed by the core WebVTT parser
+4. `CueSynchronizer` computes active cues at `currentTime` on every tick
+5. `@streamiq/react` writes to an external `cueStore` via `cueBindings.ts`
+6. `@streamiq/ui` `SubtitleLayer` reads the store and positions cues
+
+Core logic lives in `packages/core/src/tracks/text/`. React bindings in `packages/react/src/bindings/cueBindings.ts`. The UI layer never parses VTT or computes cue timing. It renders what the store gives it.
+
+## Plugins
+
+Plugins extend the player without forking core. They attach through `PluginManager` and communicate over the public event bus.
+
+```
+register(pluginFactory)
+    → setup(player)        // subscribe to events, attach side effects
+    → … playback …
+    → destroy()            // unsubscribe, release resources (idempotent)
+```
+
+Plugins use typed factories. They never extend `PlayerOptions` with plugin-specific fields:
+
+```typescript
+// Correct: plugin config stays in the factory
+const drm = createDrmPlugin({
+  servers: { 'com.widevine.alpha': widevineUrl },
+});
+
+player.plugins.register(drm);
+
+// Forbidden: would couple core to every plugin's config shape
+new Player({ drmServers: { ... } }); // NEVER
+```
+
+## The React Layer
+
+`@streamiq/react` is a thin binding layer. It contains zero playback engine logic. React is a view adapter here, not a second engine.
+
+```
+packages/react/src/
+├── provider/         StreamqProvider (creates Player, wires lifecycle)
+├── context/          StreamqContext = Player | null only
+├── media/            PlayerRoot, Video, Audio (headless media elements)
+├── stores/           External stores (playback, volume, quality, cue, subtitle, pip, fullscreen)
+├── bindings/         RAF-batched event → store sync (bindPlayerToStores)
+├── hooks/            Granular hooks (usePlayback, useVolume, useTextTrack, usePiP, …)
+├── selectors/        Derived state selectors (no duplicated FSM)
+└── debug/            Tree-shakeable dev tooling
+```
+
+### How bindings work
+
+Player events hit `bindPlayerToStores`, which writes partial updates to vanilla external stores. Hooks read those stores through `useSyncExternalStore`, so a component only re-renders when its subscribed slice changes.
+
+High-frequency events like `timeupdate` get RAF-batched. Multiple engine ticks collapse into one store write per animation frame:
+
+```typescript
+// Simplified RAF batching in bindings/
+let rafId: number | null = null;
+let pendingTime: number | null = null;
+
+player.events.on('timeupdate', ({ currentTime }) => {
+  pendingTime = currentTime;
+  if (rafId === null) {
+    rafId = requestAnimationFrame(() => {
+      timeStore.setState({ currentTime: pendingTime! });
+      rafId = null;
+    });
+  }
+});
+```
+
+At most one React re-render per frame for the time display. Not 60 re-renders per second rippling through the entire player tree.
+
+`StreamqContext` carries one thing: the `Player` instance. Mirroring full playback state in React context would create a second source of truth, and this architecture explicitly avoids that.
+
+### Hook surface
+
+Every hook subscribes to exactly one store slice. `usePlaybackState()` tracks play, pause, buffer, and ended. `useCurrentTime()` is RAF-batched and isolated to frame ticks. `useQualities()` watches available and active quality levels. `useCue()` follows the active subtitle cue. `useVolume()` handles volume and mute. `usePiP()` and `useFullscreen()` cover their respective modes. `useTextTrack()` reacts to track selection changes.
+
+A volume slider never re-renders when the timestamp changes. A seekbar thumb never re-renders when subtitles change. Selective subscription is the whole performance story.
+
+### Building custom UI
+
+```typescript
+import { StreamqProvider, PlayerRoot, Video, usePlay, useCurrentTime } from '@streamiq/react';
+import { PlayButton, SeekbarRoot, SubtitleLayer } from '@streamiq/ui';
+import { createHlsPlaybackAdapter } from '@streamiq/hls';
+
+function MyPlayer({ src }: { src: string }) {
+  return (
+    <StreamqProvider
+      createPlaybackAdapter={createHlsPlaybackAdapter}
+      source={src}
+    >
+      <PlayerRoot>
+        <Video />
+        <SubtitleLayer />
+        <MyControls />
+      </PlayerRoot>
+    </StreamqProvider>
+  );
+}
+
+function MyControls() {
+  const { toggle } = usePlay();
+  const time = useCurrentTime();
+  return (
+    <>
+      <PlayButton onPress={toggle} />
+      <span>{formatTime(time)}</span>
+      <SeekbarRoot />
+    </>
+  );
+}
+```
+
+Your layout. Your design system. Streamq handles the wiring.
+
+## The UI Layer
+
+`@streamiq/ui` ships render-only React primitives. No playback orchestration, no store logic. Components read hooks from `@streamiq/react` or receive props. They never call `player.play()` directly.
+
+```
+packages/ui/src/
+├── controls/         PlayButton, VolumeControls, IconButton, ToggleButton
+├── seekbar/          SeekbarRoot, Track, Thumb, Tooltip, Buffered, Markers
+├── menu/             MenuRoot, MenuList, MenuItem, MenuPage, radio/checkbox items
+├── overlays/         OverlayLayer, OverlayPanel, OverlayBackdrop
+├── subtitles/        SubtitleLayer, SubtitleCue, SubtitleRegion
+├── compositions/     BottomControls, TopControls, SettingsOverlay, BufferingOverlay
+├── layout/           ControlBar, TopDock, BottomDock, CenterOverlay
+├── focus/            FocusTrap, FocusScope, RovingFocusGroup
+├── animation/        FadeTransition, SlideTransition, ScaleTransition
+├── accessibility/    LiveRegion, VisuallyHidden
+└── icons/            Play, Pause, Volume, PiP, Fullscreen, Settings, …
+```
+
+Instead of `<Player showPiP={true} showQuality={false} />`, you compose what you need:
+
+```typescript
+<ControlBar>
+  <PlayButton />
+  <SeekbarRoot />
+  <VolumeControls />
+  <SettingsMenu />
+</ControlBar>
+```
+
+No CSS ships from `@streamiq/ui`. Bring your own design system, or pull in `@streamiq/themes` for `--sq-*` variable tokens. Accessibility is built into the primitives: roving focus for control bars, live regions for playback announcements, visually hidden labels for icon-only buttons.
+
+## The Player Preset
+
+`@streamiq/player` is the only package that wires everything together. It is optional. This is Tier 3.
+
+```
+packages/player/src/
+├── presets/          StreamiqPlayer, CinematicSettingsContent, adapter selection
+├── layouts/          DefaultLayout, CompactLayout, MobileLayout, LiveLayout
+├── providers/        PlayerUXProvider, OverlayProvider, KeyboardProvider
+├── visibility/       Controls visibility policy, idle timer, pointer tracker
+├── gestures/         Touch sessions, double-tap seek, swipe volume/brightness
+├── keyboard/         Keymap, dispatch, focus scope
+├── fullscreen/       Fullscreen controller + layout reflow
+├── overlays/         Overlay manager, priority stack, open/close state
+├── menus/            Settings flow, menu stack, page navigation
+├── scrubbing/        Preview thumbnails, scrubbing controller
+├── seekbar/          Timeline markers, ad breaks, chapter points
+├── accessibility/    ARIA announcer, focus manager
+├── responsive/       Viewport policy, device mode, interaction mode
+└── state/            UI state machine (separate from playback FSM)
+```
+
+### Two state machines, on purpose
+
+Playback state lives in `@streamiq/core` and governs the stream itself: idle, loading, playing, buffering, ended. UI chrome state lives in `@streamiq/player` and governs what the user sees: controls visible or hidden, menus open, overlay stack, scrubbing mode.
+
+A dashboard widget on Tier 1 should not carry controls-visible state. Mixing these FSMs would force that on every consumer.
+
+```
+UI FSM (simplified):
+  controls-visible ◄──► controls-hidden
+       │                      │
+       ▼                      ▼
+  menu-open              overlay-open
+       │                      │
+       └──── scrubbing ────────┘
+```
+
+Visibility policy combines an idle timer, pointer tracking, and focus state: hide controls after 3 seconds of inactivity when no menu is open and the user is not scrubbing; show them again on pointer move, key press, or touch.
+
+Styling runs through `--sq-*` CSS variables via `@streamiq/themes/css/base.css` or `@streamiq/player/baseline.css`.
+
+## Three Ways to Integrate
+
+### Tier 1: Headless
+
+For dashboards, embedded widgets, or non-React apps:
+
+```typescript
+import { Player } from '@streamiq/core';
+import { createHlsPlaybackAdapter } from '@streamiq/hls';
+
+const video = document.querySelector('video')!;
+const player = new Player({
+  target: video,
+  createPlaybackAdapter: createHlsPlaybackAdapter,
+});
+
+await player.load('https://cdn.example.com/stream.m3u8');
+await player.play();
+
+player.events.on('timeupdate', ({ currentTime }) => {
+  dashboard.updateProgress(currentTime);
+});
+```
+
+Core plus one adapter. No React, no UI package.
+
+### Tier 2: React with custom UI
+
+For products that need full design control:
+
+```typescript
+import { StreamqProvider, PlayerRoot, Video } from '@streamiq/react';
+import { PlayButton, SeekbarRoot, VolumeControls } from '@streamiq/ui';
+import { createDashPlaybackAdapter } from '@streamiq/dash';
+
+<StreamqProvider
+  createPlaybackAdapter={createDashPlaybackAdapter}
+  source={manifestUrl}
+  plugins={[analyticsPlugin, mediaSessionPlugin]}
+>
+  <PlayerRoot className="my-brand-player">
+    <Video />
+  </PlayerRoot>
+</StreamqProvider>
+```
+
+### Tier 3: Cinematic preset
+
+For teams that want a production player without building chrome from scratch:
+
+```typescript
+import { StreamiqPlayer } from '@streamiq/player';
+import '@streamiq/themes/css/base.css';
+
+<StreamiqPlayer
+  source="https://cdn.example.com/stream.m3u8"
+  layout="cinematic"
+  autoplay
+/>
+```
+
+Same engine underneath. Same events. Same adapters. The preset is a convenience layer, not a fork.
+
+## What Happens When You Press Play
+
+Tracing a Tier 3 `StreamiqPlayer` from source prop to rendered UI:
+
+```
+1. App passes source prop to StreamiqPlayer
+2. @streamiq/player selects adapter (HLS/DASH), layout, and UX providers
+3. StreamqProvider creates a Player instance with the injected adapter factory
+4. @streamiq/react calls new Player(options) in @streamiq/core
+5. Player.load(source): source resolver validates and resolves the URL
+6. Core delegates to adapter.load(resolved)
+7. Adapter runs dynamic import('hls.js') or import('shaka-player')
+8. Engine attaches to HTMLMediaElement and fetches the manifest
+9. Engine fires internal events (HLS.Events.MANIFEST_PARSED, etc.)
+10. Adapter normalizes them into PlayerEvents on the mitt bus
+11. Core StateMachine transitions: loading → ready
+12. bindPlayerToStores syncs events to external stores (RAF-batched)
+13. React hooks (usePlayback, useCue, useCurrentTime) read stores
+14. @streamiq/ui primitives render from hook state
+15. @streamiq/player manages visibility, gestures, and keyboard
+16. User sees composed UI. Engine types never surface.
+```
+
+Remove `@streamiq/player` and steps 2 and 15 vanish. Steps 3 through 14 still work.
+
+## Testing and Quality
+
+Unit tests run on Vitest across FSM transitions, cue sync, store bindings, and adapter normalization. E2E runs on Playwright for HLS/DASH playback, subtitles, DRM, and destroy/remount cycles. A custom boundary checker blocks forbidden `@streamiq/*` import edges. size-limit keeps core in the 20–40KB gzipped range. Biome 2 handles lint and format across all 15 org packages. TypeScript strict mode runs per package with no `any` escape hatches.
+
+E2E runs against a vanilla TypeScript harness in `e2e/`, not React. That proves the headless core works without the presentation layer. React-specific behavior lives in `packages/react/tests/`. The local Vite playground in `examples/player-playground/` is private and serves as the manual integration harness.
+
+## Constraints I Refuse to Bend
+
+Core stays headless so framework-agnostic integrators stay first-class. One playback FSM prevents boolean state drift. Adapters stay isolated so engine swaps do not touch core. Plugins stay isolated so features ship without core releases. React stays thin: hooks are view adapters, not a second engine. UI stays render-only with composable primitives, not a god component. The player preset is optional convenience, not the SDK definition. Heavy deps stay lazy so bundle size matches what you actually use. Boundaries stay enforced so drift fails the build. Subtitles stay in core with one cue runtime.
+
+## Decisions Worth Explaining
+
+**Why not extend an existing player?**
+
+Every React video library I looked at (react-player, the video.js wrapper, Plyr React) ships a `<Player />` that owns the UI. Custom chrome means CSS overrides or forking internals. Streamq gives you hooks and headless primitives at Tier 2, or a composed preset at Tier 3 if you want one. The SDK never forces a look.
+
+**Why external stores instead of React state?**
+
+Media players emit at 60fps. React state at that frequency reconciles the entire component tree 60 times per second. External stores with selective `useSyncExternalStore` subscriptions mean only the time display re-renders on tick. The volume slider, subtitle layer, and settings menu stay quiet.
+
+**Why CI-enforced boundaries?**
+
+Monorepos drift. Without automated checks, core eventually imports React, adapters leak Shaka types, and `shared` becomes a junk drawer. The boundary checker turns architectural violations into build failures.
+
+Other choices followed from the same logic: mitt for events (~200 bytes, typed, zero deps), RAF batching for one store write per frame, factory-injected adapters so core never hardcodes hls.js or Shaka, subtitles in core because cue sync is playback infrastructure, a separate UI FSM so headless consumers skip controls-visible state, Changesets per package so an adapter fix does not bump react, and Playwright on vanilla TS to prove core works without React.
+
+## Where It Stands
+
+- **15 packages** in the [`@streamiq` npm org](https://www.npmjs.com/org/streamiq), **9 published** at `v1.1.0` (`@streamiq/player` at `v1.1.1`)
+- **Live on npm:** `core`, `shared`, `themes`, `hls`, `dash`, `react`, `ui`, `player`, `plugin-drm`
+- **Org-reserved:** `plugins`, `plugin-analytics`, `plugin-thumbnails`, `plugin-casting`, `plugin-ads`, `plugin-media-session`
+- **~5kB core** with one runtime dependency (mitt)
+- **40+ granular hooks** in `@streamiq/react`
+- **SSR-safe:** no `window` or `document` access at import time
+- **Zero CSS** in core, react, or ui
+- **Lazy engines:** hls.js and shaka-player load only with their adapter
+- **25+ architecture docs** covering adapters, FSM, subtitles, PiP, live streaming, low-latency, error recovery, accessibility, and roadmaps
