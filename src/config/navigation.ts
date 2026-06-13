@@ -1,3 +1,5 @@
+import { siteConfig } from "./site";
+
 export interface NavItem {
   title: string;
   href: string;
@@ -36,14 +38,29 @@ const allHomeSections: HomeSection[] = [
   { id: "contact", label: "Contact" },
 ];
 
+function withResumeNav(nav: NavItem[]): NavItem[] {
+  if (!siteConfig.resumeUrl) return nav;
+  return [
+    ...nav,
+    {
+      title: "Resume",
+      href: siteConfig.resumeUrl,
+      description: "Download PDF",
+      external: true,
+    },
+  ];
+}
+
 export function getSiteNav(hasBlogPosts: boolean): NavItem[] {
   if (hasBlogPosts) return allSiteNav;
   return allSiteNav.filter((item) => item.href !== "/blog");
 }
 
 export function getFooterNav(hasBlogPosts: boolean): NavItem[] {
-  if (hasBlogPosts) return allFooterNav;
-  return allFooterNav.filter((item) => item.href !== "/blog");
+  const nav = hasBlogPosts
+    ? allFooterNav
+    : allFooterNav.filter((item) => item.href !== "/blog");
+  return withResumeNav(nav);
 }
 
 export function getHomeSections(hasBlogPosts: boolean): HomeSection[] {

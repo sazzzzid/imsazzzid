@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { motion } from "@/components/motion";
+import { Magnetic } from "@/components/motion/magnetic";
 import { ArrowUpRight } from "lucide-react";
 import { siteConfig } from "@/config/site";
+import { Button } from "@/components/ui/button";
 import {
   availabilityConfig,
   craftNotes,
@@ -58,6 +60,31 @@ export function AboutContent() {
             Most days: video pipelines, DRM, and the kind of frontend problems
             that don&apos;t fit in a Jira ticket.
           </motion.p>
+          {siteConfig.resumeUrl && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.15, ease }}
+              className="mt-8"
+            >
+              <Magnetic strength={0.25}>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="focus-ring rounded-full px-6 min-h-11"
+                >
+                  <a
+                    href={siteConfig.resumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View resume
+                  </a>
+                </Button>
+              </Magnetic>
+            </motion.div>
+          )}
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16 lg:gap-20">
@@ -233,7 +260,22 @@ export function AboutContent() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.1, ease }}
+              className="space-y-3"
             >
+              {siteConfig.resumeUrl && (
+                <a
+                  href={siteConfig.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="focus-ring group flex items-center justify-between rounded-xl border border-border/50 bg-surface-1/50 px-5 py-4 transition-colors hover:border-brand/30"
+                >
+                  <span className="text-sm font-medium">View resume</span>
+                  <ArrowUpRight
+                    size={16}
+                    className="text-muted-foreground/50 transition-all group-hover:text-brand group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  />
+                </a>
+              )}
               <Link
                 href="/contact"
                 className="focus-ring group flex items-center justify-between rounded-xl border border-border/50 bg-surface-1/50 px-5 py-4 transition-colors hover:border-brand/30"

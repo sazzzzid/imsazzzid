@@ -56,8 +56,28 @@ export function SiteNav({ hasBlogPosts }: { hasBlogPosts: boolean }) {
     title: string,
     href: string,
     onNavigate?: () => void,
+    external?: boolean,
   ) => {
     const isActive = isNavItemActive(href, pathname);
+
+    if (external) {
+      return (
+        <a
+          key={href}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onNavigate}
+          className={cn(
+            navLinkClass,
+            "w-full justify-start lg:w-auto",
+            "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+          )}
+        >
+          {title}
+        </a>
+      );
+    }
 
     // On homepage, Contact scrolls to the in-page section (matches hero CTA).
     if (pathname === "/" && href === "/contact") {
@@ -135,7 +155,9 @@ export function SiteNav({ hasBlogPosts }: { hasBlogPosts: boolean }) {
         className="hidden lg:flex fixed fixed-top-safe fixed-left-safe z-50 items-center gap-1 px-2 py-2 rounded-full bg-background/60 backdrop-blur-xl border border-border shadow-lg shadow-black/5 transition-[background,backdrop-filter] duration-300"
         aria-label="Main navigation"
       >
-        {siteNav.map((item) => renderNavLink(item.title, item.href))}
+        {siteNav.map((item) =>
+          renderNavLink(item.title, item.href, undefined, item.external),
+        )}
       </motion.nav>
 
       <nav
@@ -160,7 +182,12 @@ export function SiteNav({ hasBlogPosts }: { hasBlogPosts: boolean }) {
 
             <div className="flex flex-col gap-1 px-2 pt-2">
               {siteNav.map((item) =>
-                renderNavLink(item.title, item.href, () => setOpen(false)),
+                renderNavLink(
+                  item.title,
+                  item.href,
+                  () => setOpen(false),
+                  item.external,
+                ),
               )}
             </div>
           </SheetContent>

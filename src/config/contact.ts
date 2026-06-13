@@ -66,17 +66,17 @@ export const contactMethods: ContactMethod[] = [
   },
 ];
 
-export const contactMethodsWithResume: ContactMethod[] = [
-  ...contactMethods,
-  ...(siteConfig.resumeUrl
-    ? [
-        {
-          label: "Resume",
-          href: siteConfig.resumeUrl,
-          icon: FileText,
-          description: "Download PDF",
-          newTab: true,
-        },
-      ]
-    : []),
-];
+const resumeEntry: ContactMethod | null = siteConfig.resumeUrl
+  ? {
+      label: "Resume",
+      href: siteConfig.resumeUrl,
+      icon: FileText,
+      description: "Experience, skills, and background.",
+      value: siteConfig.resumeUrl.split("/").pop() ?? "resume.pdf",
+      newTab: true,
+    }
+  : null;
+
+export const contactMethodsWithResume: ContactMethod[] = resumeEntry
+  ? [contactMethods[0], resumeEntry, ...contactMethods.slice(1)]
+  : contactMethods;

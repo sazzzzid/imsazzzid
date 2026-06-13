@@ -96,7 +96,7 @@ export const experiences = [
     type: "work" as const,
   },
   {
-    period: "Jul 2022 to Mar 2023",
+    period: "April 2022 to Mar 2023",
     role: "Software Engineer I",
     company: "Physics Wallah",
     lead: "In my first year, I worked on a 90-module admin platform that supports core operations across the business.",

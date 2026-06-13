@@ -180,6 +180,24 @@ export function HeroSection({ projects }: { projects: Project[] }) {
                   </a>
                 </Button>
               </Magnetic>
+              {siteConfig.resumeUrl && (
+                <Magnetic strength={0.25}>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    className="focus-ring rounded-full px-6 min-h-11"
+                  >
+                    <a
+                      href={siteConfig.resumeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View resume
+                    </a>
+                  </Button>
+                </Magnetic>
+              )}
               <Magnetic strength={0.25}>
                 <Button
                   asChild

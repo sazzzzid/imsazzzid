@@ -49,9 +49,20 @@ export function Footer({ hasBlogPosts }: { hasBlogPosts: boolean }) {
               {pageLinks.map((item, i) => (
                 <span key={item.href} className="inline-flex items-center gap-2.5">
                   {i > 0 && <Dot />}
-                  <Link href={item.href} className={linkClass}>
-                    {item.title}
-                  </Link>
+                  {item.external ? (
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={linkClass}
+                    >
+                      {item.title}
+                    </a>
+                  ) : (
+                    <Link href={item.href} className={linkClass}>
+                      {item.title}
+                    </Link>
+                  )}
                 </span>
               ))}
               <Dot />

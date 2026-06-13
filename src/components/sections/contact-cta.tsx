@@ -50,26 +50,46 @@ export function ContactCTA() {
               </p>
             </StaggerItem>
             <StaggerItem>
-              <Magnetic strength={0.2}>
-                <Button
-                  asChild
-                  size="lg"
-                  className="focus-ring rounded-full px-6 min-h-11"
-                >
-                  <a href={`mailto:${siteConfig.links.email}`}>
-                    <span className="sm:hidden">Email me</span>
-                    <span className="hidden sm:inline">
-                      Email {siteConfig.links.email}
-                    </span>
-                  </a>
-                </Button>
-              </Magnetic>
+              <div className="flex flex-wrap items-center gap-3">
+                <Magnetic strength={0.2}>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="focus-ring rounded-full px-6 min-h-11"
+                  >
+                    <a href={`mailto:${siteConfig.links.email}`}>
+                      <span className="sm:hidden">Email me</span>
+                      <span className="hidden sm:inline">
+                        Email {siteConfig.links.email}
+                      </span>
+                    </a>
+                  </Button>
+                </Magnetic>
+                {siteConfig.resumeUrl && (
+                  <Magnetic strength={0.2}>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="lg"
+                      className="focus-ring rounded-full px-6 min-h-11"
+                    >
+                      <a
+                        href={siteConfig.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View resume
+                      </a>
+                    </Button>
+                  </Magnetic>
+                )}
+              </div>
             </StaggerItem>
           </Stagger>
 
-          <Stagger className="grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
+          <Stagger className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
             {contactMethodsWithResume.map((method) => (
-              <StaggerItem key={method.label}>
+              <StaggerItem key={method.label} className="h-full">
                 <motion.a
                   href={method.href}
                   target={
@@ -84,7 +104,7 @@ export function ContactCTA() {
                   }
                   whileHover={reducedMotion ? undefined : { y: -4, scale: 1.02 }}
                   transition={{ duration: 0.3, ease: editorialEase }}
-                  className="focus-ring group flex flex-col gap-3 rounded-xl border border-border/50 bg-surface-1/50 p-5 min-h-[8rem] transition-colors hover:border-brand/30 hover:shadow-lg hover:shadow-brand/5"
+                  className="focus-ring group flex h-full min-h-[8rem] flex-col gap-3 rounded-xl border border-border/50 bg-surface-1/50 p-5 transition-colors hover:border-brand/30 hover:shadow-lg hover:shadow-brand/5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <method.icon
@@ -96,13 +116,13 @@ export function ContactCTA() {
                       className="text-muted-foreground/50 transition-all duration-300 group-hover:text-brand group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                     />
                   </div>
-                  <div className="space-y-1">
+                  <div className="flex flex-1 flex-col gap-1">
                     <p className="text-sm font-medium">{method.label}</p>
                     <p className="text-xs text-muted-foreground/80 leading-relaxed">
                       {method.description}
                     </p>
                     {method.value && (
-                      <p className="text-xs font-mono text-muted-foreground/80 pt-1">
+                      <p className="text-xs font-mono text-muted-foreground/80 pt-1 mt-auto">
                         {method.value}
                       </p>
                     )}

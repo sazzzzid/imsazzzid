@@ -71,7 +71,7 @@ export function ContactContent() {
         <motion.div
           {...motionProps}
           transition={{ duration: 0.6, delay: reducedMotion ? 0 : 0.15, ease }}
-          className="flex justify-center sm:justify-start"
+          className="flex flex-wrap justify-center sm:justify-start items-center gap-3"
         >
           <Magnetic strength={0.25}>
             <Button
@@ -87,6 +87,24 @@ export function ContactContent() {
               </a>
             </Button>
           </Magnetic>
+          {siteConfig.resumeUrl && (
+            <Magnetic strength={0.25}>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="focus-ring rounded-full px-6 min-h-11"
+              >
+                <a
+                  href={siteConfig.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View resume
+                </a>
+              </Button>
+            </Magnetic>
+          )}
         </motion.div>
 
         <motion.div

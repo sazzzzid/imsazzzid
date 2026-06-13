@@ -26,8 +26,7 @@ export const siteConfig = {
     bio: "I build video platforms, DRM playback, and VisualJS.",
   },
   availability: "open" as AvailabilityStatus,
-  /** Set when resume.pdf is added to /public */
-  resumeUrl: null as string | null,
+  resumeUrl: "/sazid_khan.pdf",
 } as const;
 
 export type SiteConfig = typeof siteConfig;
