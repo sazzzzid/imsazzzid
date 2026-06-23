@@ -8,7 +8,7 @@ import { Footer } from "@/components/layout/footer";
 import { MotionProvider } from "@/components/providers/motion-provider";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
 import { SmoothScroll } from "@/components/providers/smooth-scroll";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/next";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { PersonJsonLd } from "@/components/shared/json-ld";
 import "./globals.css";
